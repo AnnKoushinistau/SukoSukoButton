@@ -1,0 +1,19 @@
+<project outputDir="..\..\Confused" baseDir=".\bin\Debug" xmlns="http://confuser.codeplex.com">
+  <rule pattern="true" preset="maximum">
+    <protection id="anti ildasm" />
+    <protection id="anti tamper" />
+    <protection id="constants" />
+    <protection id="ctrl flow" />
+    <protection id="anti dump" />
+    <protection id="anti debug" />
+    <protection id="invalid metadata" />
+    <protection id="ref proxy" />
+    <protection id="resources" />
+    <protection id="rename" />
+  </rule>
+  <!--packer id="compressor" /-->
+  <module path="WebDriver.dll" />
+  <module path="WebDriver.Support.dll" />
+  <module path="Selenium.WebDriverBackedSelenium.dll" />
+  <module path="SukoSukoCui.exe" />
+</project>

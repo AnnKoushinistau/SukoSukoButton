@@ -78,6 +78,7 @@
   <ItemGroup>
     <None Include=".gitignore" />
     <None Include="App.config" />
+    <None Include="obfuscate.bat" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.6.1">
@@ -95,9 +96,14 @@
     <Content Include="chromedriver.exe">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="obfuscate.xml" />
     <Content Include="Selenium.WebDriverBackedSelenium.dll" />
     <Content Include="WebDriver.dll" />
     <Content Include="WebDriver.Support.dll" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>
+    </PostBuildEvent>
+  </PropertyGroup>
 </Project>
