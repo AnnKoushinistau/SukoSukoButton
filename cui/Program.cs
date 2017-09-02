@@ -218,12 +218,9 @@ namespace SUKOAuto
                     }
 
                     Actions action = new Actions(Chrome);
-                    action.MoveToElement(SukoBtn)./*Perform();
-                    action.*/ClickAndHold().Perform();
-                    /*action.MoveToElement(SukoBtn).Perform();*/
+                    action.MoveToElement(SukoBtn).ClickAndHold().Perform();
                     System.Threading.Thread.Sleep(100);
-                    action.MoveToElement(SukoBtn)./*Perform();
-                    action.*/Release().Perform();
+                    action.MoveToElement(SukoBtn).Release().Perform();
 
                     return;
                 }
