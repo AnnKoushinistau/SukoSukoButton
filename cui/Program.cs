@@ -6,6 +6,7 @@ using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Interactions;
 using System.ComponentModel;
+using System.Collections;
 
 namespace SUKOAuto
 {
@@ -74,6 +75,14 @@ namespace SUKOAuto
 
 
             var ChromeOptions = new ChromeOptions();
+            if (opt.proxy!=null)
+            {
+                ChromeOptions.AddArguments("--proxy-server="+ opt.proxy);
+            }
+            if (opt.headless)
+            {
+                ChromeOptions.AddArguments("headless");
+            }
 
             List<IWebDriver> Chromes = new IWebDriver[opt.parallel].Select(a => new ChromeDriver(ChromeOptions)).Cast<IWebDriver>().ToList();
             IWebDriver Chrome = Chromes[0];
@@ -102,23 +111,31 @@ namespace SUKOAuto
                 int Number = i;
                 IWebDriver SingleChrome = Chromes[i];
                 List<string> LocalMovies=MoviesEachThread[i];
+                SortedMultiSet<string> SukoFailureCount = new SortedMultiSet<string>();
                 Threads[i].DoWork += (a, b) =>
                 {
                     try
                     {
-                        foreach (string MovieID in LocalMovies)
+                        while (LocalMovies.Count != 0)
                         {
-                            try
+                            List<string> Failures = new List<string>();
+                            foreach (string MovieID in LocalMovies)
                             {
-                                Console.WriteLine(@"スレッド{0}: {1}すこ！ ({2}/{3})", Number, MovieID, LocalMovies.IndexOf(MovieID), LocalMovies.Count);
-                                SukoSukoMachine.Suko(SingleChrome, MovieID);
+                                try
+                                {
+                                    Console.WriteLine(@"スレッド{0}: {1}すこ！ ({2}/{3})", Number, MovieID, LocalMovies.IndexOf(MovieID), LocalMovies.Count);
+                                    SukoSukoMachine.Suko(SingleChrome, MovieID);
+                                }
+                                catch (Exception e)
+                                {
+                                    Console.WriteLine("スレッド{0}: {1} すこり失敗", Number, MovieID);
+                                    Console.WriteLine(e.Message);
+                                    Console.WriteLine(e.StackTrace);
+                                    Failures.Add(MovieID);
+                                    SukoFailureCount.Add(MovieID);
+                                }
                             }
-                            catch (Exception e)
-                            {
-                                Console.WriteLine("スレッド{0}: {1} すこり失敗", Number, MovieID);
-                                Console.WriteLine(e.Message);
-                                Console.WriteLine(e.StackTrace);
-                            }
+                            LocalMovies = Failures.Where(c=>SukoFailureCount.GetCount(c)<10).ToList();
                         }
                         Console.WriteLine("スレッド{0}: 完了", Number);
                     }
@@ -143,7 +160,84 @@ namespace SUKOAuto
             }
         }
     }
-    
+
+    public class SortedMultiSet<T> : IEnumerable<T>
+    {
+        private SortedDictionary<T, int> _dict;
+
+        public SortedMultiSet()
+        {
+            _dict = new SortedDictionary<T, int>();
+        }
+
+        public SortedMultiSet(IEnumerable<T> items) : this()
+        {
+            Add(items);
+        }
+
+        public bool Contains(T item)
+        {
+            return _dict.ContainsKey(item);
+        }
+
+        public void Add(T item)
+        {
+            if (_dict.ContainsKey(item))
+                _dict[item]++;
+            else
+                _dict[item] = 1;
+        }
+
+        public void Add(IEnumerable<T> items)
+        {
+            foreach (var item in items)
+                Add(item);
+        }
+
+        public void Remove(T item)
+        {
+            if (!_dict.ContainsKey(item))
+                throw new ArgumentException();
+            if (--_dict[item] == 0)
+                _dict.Remove(item);
+        }
+
+        public int GetCount(T item) {
+            if (_dict.ContainsKey(item))
+                return _dict[item];
+            else
+                return 0;
+        }
+
+        // Return the last value in the multiset
+        public T Peek()
+        {
+            if (!_dict.Any())
+                throw new NullReferenceException();
+            return _dict.Last().Key;
+        }
+
+        // Return the last value in the multiset and remove it.
+        public T Pop()
+        {
+            T item = Peek();
+            Remove(item);
+            return item;
+        }
+
+        public IEnumerator<T> GetEnumerator()
+        {
+            foreach (var kvp in _dict)
+                for (int i = 0; i < kvp.Value; i++)
+                    yield return kvp.Key;
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return this.GetEnumerator();
+        }
+    }
+
     class SukoSukoMachine
     {
         const string URL_LOGIN = @"https://accounts.google.com/ServiceLogin";
@@ -302,26 +396,57 @@ namespace SUKOAuto
     class SukoSukoOption {
         public int parallel=3;
         public int maxSuko=-1;
+        public bool headless = false;
+        public string proxy = null;
 
         public string[] LoadOpt(string[] args) {
             List<string> finalArgs = new List<string>();
             for (int i=0; i<args.Length;i++) {
-                switch (args[i].ToLower()) {
+                string arg = args[i];
+                switch (arg.ToLower()) {
                     case "--first-10":
                         maxSuko = 10;
                         break;
                     case "--suko":
-                        maxSuko = int.Parse(args[i+1]);
+                        maxSuko = int.Parse(args[i + 1]);
                         i++;
                         break;
                     case "--parallel":
                     case "--para":
                     case "--heikou":
-                        parallel = int.Parse(args[i+1]);
+                        parallel = int.Parse(args[i + 1]);
+                        i++;
+                        break;
+                    case "--headless":
+                        if (bool.TryParse(args[i + 1], out headless))
+                        {
+                            i++;
+                        }
+                        break;
+                    case "--proxy":
+                        proxy = args[i + 1];
                         i++;
                         break;
                     default:
-                        finalArgs.Add(args[i]);
+                        if (arg.StartsWith("-count:"))
+                        {
+                            // same as --suko
+                            maxSuko = int.Parse(arg.Split(':')[1]);
+                        }
+                        else if (arg == "-display:headless")
+                        {
+                            // same as --headless true
+                            headless = true;
+                        }
+                        else if (arg.StartsWith("-proxy:"))
+                        {
+                            // same as --proxy
+                            proxy = arg.Remove("-proxy:".Length);
+                        }
+                        else
+                        {
+                            finalArgs.Add(arg);
+                        }
                         break;
                 }
             }
