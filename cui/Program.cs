@@ -272,7 +272,7 @@ namespace SUKOAuto
 
         public static void ReLogin(IWebDriver Chrome,string ContinuationURL) {
             if (
-               Chrome.FindElements(By.CssSelector("paper-button")).Where(a=>a.Text=="ログイン").Count()!=0
+               Chrome.FindElements(By.XPath("//paper-button[text() = \"ログイン\"]")).Count()!=0
                )
             {
                 // looks like we need to login again here
