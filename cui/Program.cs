@@ -155,17 +155,48 @@ namespace SUKOAuto
             Chrome.Url = string.Format(URL_CHANNEL, Channel);
             ReLogin(Chrome, Chrome.Url);
 
-            while (Chrome.PageSource.Contains("もっと読み込む"))
-            {
-                try
-                {
-                    Chrome.FindElement(By.XPath("//button[contains(@aria-label, 'もっと読み込む')]")).Click();
-                }
-                catch { }
-                System.Threading.Thread.Sleep(100);
-            }
+            System.Threading.Thread.Sleep(5000);
 
-            return RegExp(Chrome.PageSource, @"(?<=<a href=""/watch\?v=)[\dA-Za-z_-]+");
+
+            // https://stackoverflow.com/questions/18572651/selenium-scroll-down-a-growing-page
+            long scrollHeight = 0;
+            int sameHeight = 0;
+            IJavaScriptExecutor js = (IJavaScriptExecutor)Chrome;
+                
+            do
+            {
+                var newScrollHeight = (long)js.ExecuteScript("window.scrollTo(0, document.body.scrollHeight); return document.body.scrollHeight;");
+
+                if (newScrollHeight == scrollHeight)
+                {
+                    if (sameHeight > 10)
+                    {
+                        sameHeight = 0;
+                        break;
+                    }
+                    else {
+                        sameHeight++;
+                    }
+                }
+                else
+                {
+                    sameHeight = 0;
+                    scrollHeight = newScrollHeight;
+                    System.Threading.Thread.Sleep(3000);
+                }
+            } while (true);
+
+            return Chrome.FindElements(By.XPath("//a[contains(@href,\"/watch?v=\")]"))
+                .Select(a=>a.GetAttribute("href"))
+                .Distinct()
+                /*.Where(a=> {
+                    Console.WriteLine(a);
+                    return true;
+                })*/
+                .Select(a=>RegExp(a, "(?<=.+/watch\\?v=)[\\dA-Za-z_-]+"))
+                .SelectMany(A=>A)
+                .ToArray();
+            // return RegExp(Chrome.PageSource, @"(?<=<a href=""/watch\?v=)[\dA-Za-z_-]+");
         }
 
         public static void Suko(IWebDriver Chrome, string MovieID)
@@ -174,20 +205,36 @@ namespace SUKOAuto
             System.Threading.Thread.Sleep(500);
             ReLogin(Chrome, Chrome.Url);
 
-            IWebElement SukoBtn = Chrome.FindElement(By.XPath("//button[@title = '低く評価']"));
-            if (SukoBtn.GetCssValue("display")=="none") {
-                // already downvoted
-                return;
+            Exception lastErr = null;
+
+            for (int itr=0; itr<10;itr++) {
+                try
+                {
+                    IWebElement SukoBtn = Chrome.FindElement(By.XPath("//button[contains(@aria-label,\"低く評価しました\")]"));
+                    if (SukoBtn.GetAttribute("aria-pressed") == "true")
+                    {
+                        // already downvoted
+                        return;
+                    }
+
+                    Actions action = new Actions(Chrome);
+                    action.MoveToElement(SukoBtn)./*Perform();
+                    action.*/ClickAndHold().Perform();
+                    /*action.MoveToElement(SukoBtn).Perform();*/
+                    System.Threading.Thread.Sleep(100);
+                    action.MoveToElement(SukoBtn)./*Perform();
+                    action.*/Release().Perform();
+
+                    return;
+                }
+                catch (Exception e)
+                {
+                    System.Threading.Thread.Sleep(500);
+                    lastErr = e;
+                }
             }
 
-            Actions action = new Actions(Chrome);
-            action.MoveToElement(SukoBtn).Perform();
-            action.ClickAndHold().Perform();
-            action.MoveToElement(SukoBtn).Perform();
-            System.Threading.Thread.Sleep(100);
-            action.MoveToElement(SukoBtn).Perform();
-            action.Release().Perform();
-
+            throw lastErr;
         }
 
         public static void Login(IWebDriver Chrome, string Mail, string Pass)
@@ -228,13 +275,12 @@ namespace SUKOAuto
 
         public static void ReLogin(IWebDriver Chrome,string ContinuationURL) {
             if (
-               Chrome.FindElements(By.CssSelector("span.yt-uix-button-content")).Count != 0 &&
-               Chrome.FindElement(By.CssSelector("span.yt-uix-button-content")).Text == "ログイン"
+               Chrome.FindElements(By.CssSelector("paper-button")).Where(a=>a.Text=="ログイン").Count()!=0
                )
             {
                 // looks like we need to login again here
                 Console.WriteLine("再ログイン中...");
-                Chrome.FindElement(By.CssSelector("span.yt-uix-button-content")).Click();
+                Chrome.FindElement(By.XPath("//paper-button[text() = \"ログイン\"]")).Click();
                 System.Threading.Thread.Sleep(100);
                 Chrome.Url = ContinuationURL;
             }
