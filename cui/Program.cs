@@ -20,13 +20,16 @@ namespace SUKOAuto
                 Console.WriteLine("--first-10 : 最初の10個をすこる");
                 Console.WriteLine("--suko [N] : 最初のN個をすこる");
                 Console.WriteLine("--para [N] : N並列ですこる");
+                Console.WriteLine("--headless [true|false] : ブラウザを表示するか否か。falseで表示");
+                Console.WriteLine("--proxy [STR] : プロキシSTR経由にする");
                 Console.WriteLine("コマンドはEMIAL、PASSWORD、CHANNEL IDのいずれかの間に入れても構わない。");
                 Console.WriteLine("極端例: example@suko.org --suko 10 sukosuko --para 100 UC...");
                 Console.WriteLine("推奨例: --suko 10 --para 100 example@suko.org sukosuko UC...");
+                Console.WriteLine("SUKOAuto.exeのオプションも使用できますが、自信がないのでお勧めしません。");
                 Console.WriteLine(" ");
-                Console.WriteLine("We won't leak your private!");
-                Console.WriteLine("Source code: https://github.com/AnKoushinist/suko-suko-button/tree/master/cui");
-                Console.WriteLine("Original Author: Unnamed user in Nan-J");
+                Console.WriteLine("We won't leak your private unless you don't modify this!");
+                Console.WriteLine("Source code is hidden.");
+                Console.WriteLine("Original Author: SukoSuko hou-hei");
                 Console.WriteLine("Modified by: AnKoushinist");
                 Console.WriteLine("Thanks: The holy Hatsune Daishi");
                 return;
@@ -451,6 +454,26 @@ namespace SUKOAuto
                 }
             }
             return finalArgs.ToArray();
+        }
+    }
+
+    class Emial {
+        public static String PC_USER_AGENT = "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.110 Safari/537.36";
+
+        public static readonly String ENDPOINT = "https://api.mytemp.email/1/";
+        public static readonly String PING = "ping";
+        public static readonly String DESTROY = "inbox/destroy";
+        public static readonly String CREATE = "inbox/create";
+        public static readonly String CHECK = "inbox/check";
+        public static readonly String EXTEND = "inbox/extend";
+        public static readonly String EML_GET = "eml/get";
+        public static readonly String EML_CREATE = "eml/create";
+        public static readonly String UTF_8 = "utf-8";
+
+        private string sid;
+
+        public Emial() {
+
         }
     }
 }
