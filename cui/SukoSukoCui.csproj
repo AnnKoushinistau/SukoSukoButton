@@ -101,9 +101,15 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="obfuscate.xml" />
-    <Content Include="Selenium.WebDriverBackedSelenium.dll" />
-    <Content Include="WebDriver.dll" />
-    <Content Include="WebDriver.Support.dll" />
+    <Content Include="Selenium.WebDriverBackedSelenium.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebDriver.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebDriver.Support.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
