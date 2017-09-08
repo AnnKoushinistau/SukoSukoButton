@@ -7,6 +7,11 @@ using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Interactions;
 using System.ComponentModel;
 using System.Collections;
+using System.Net;
+using System.Web;
+using System.IO;
+using System.Threading;
+using Newtonsoft.Json.Linq;
 
 namespace SUKOAuto
 {
@@ -458,22 +463,193 @@ namespace SUKOAuto
     }
 
     class Emial {
-        public static String PC_USER_AGENT = "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.110 Safari/537.36";
+        public static string PC_USER_AGENT = "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.110 Safari/537.36";
 
-        public static readonly String ENDPOINT = "https://api.mytemp.email/1/";
-        public static readonly String PING = "ping";
-        public static readonly String DESTROY = "inbox/destroy";
-        public static readonly String CREATE = "inbox/create";
-        public static readonly String CHECK = "inbox/check";
-        public static readonly String EXTEND = "inbox/extend";
-        public static readonly String EML_GET = "eml/get";
-        public static readonly String EML_CREATE = "eml/create";
-        public static readonly String UTF_8 = "utf-8";
+        public static readonly string ENDPOINT = "https://api.mytemp.email/1/";
+        public static readonly string PING = "ping";
+        public static readonly string DESTROY = "inbox/destroy";
+        public static readonly string CREATE = "inbox/create";
+        public static readonly string CHECK = "inbox/check";
+        public static readonly string EXTEND = "inbox/extend";
+        public static readonly string EML_GET = "eml/get";
+        public static readonly string EML_CREATE = "eml/create";
+        public static readonly string UTF_8 = "utf-8";
 
-        private string sid;
+        private string sid=RandomSid();
+        private Dictionary<string, string[]> inboxes = new Dictionary<string, string[]>();
+        private DateTime sessionStarted;
+        private int taskCount;
 
-        public Emial() {
+        public Emial()
+        {
+            var data = new Dictionary<string, string>
+            {
+                ["sid"] = sid,
+                ["task"] = "1",
+                ["tt"] = "0"
+            };
+            if ((int)JsonRequest(PING, data, false)["pong"] != 1)
+                throw new Exception("Ping error");
+            sessionStarted = DateTime.Now;
+            taskCount = 1;
+        }
 
+        public List<string> Inboxes => new List<string>(inboxes.Keys);
+
+        public string CreateInbox()
+        {
+            var query = new Dictionary<string, string>
+            {
+                ["sid"] = sid,
+                ["task"] = Task,
+                ["tt"] = Tt
+            };
+            var data = JsonRequest(CREATE,query,false);
+            inboxes[(string)data["inbox"]] =new string[]{
+                (string)data["inbox_hash"],
+                (string)data["inbox_destroy_hash"]
+            };
+            return (string)data["inbox"];
+        }
+
+        public void DestroyInbox(string addr)
+        {
+            if (inboxes.ContainsKey(addr))
+                throw new Exception("No such inbox recorded: " + addr);
+            var query = new Dictionary<string, string>
+            {
+                ["inbox"] = addr,
+                ["inbox_destroy_hash"] = inboxes[addr][1],
+                ["sid"] = sid,
+                ["task"] = Task,
+                ["tt"] = Tt
+            };
+            EasyRequest(DESTROY,query,false);
+            inboxes.Remove(addr);
+        }
+
+        public void SendEmail(string from, string to, string subject, string text) {
+            var query = new Dictionary<string, string>
+            {
+                ["inbox"] = from,
+                ["inbox_hash"] = inboxes[from][0],
+                ["sid"] = sid,
+                ["task"] = Task,
+                ["tt"] = Tt
+            };
+            var json = JObject.FromObject(new {
+                to=to,
+                subject=subject,
+                text=text
+            });
+            var header = new Dictionary<string, string>
+            {
+                ["Content-Type"] = "application/json;charset=utf-8"
+            };
+            if ((int)ToJsonObject(Request(ENDPOINT + EML_CREATE + "?" + MapToQuery(query), json.ToString(), header))["ok"] != 1)
+                throw new Exception("Sending email failed");
+        }
+
+        private string Task => (taskCount++).ToString();
+
+        private string Tt => (DateTime.Now-sessionStarted).Seconds.ToString();
+        
+        private JObject ToJsonObject(string json)
+        {
+            return JObject.Parse(json);
+        }
+
+        private JObject JsonRequest(string call, Dictionary<string, string> values, bool isPost = false)
+        {
+            return ToJsonObject(EasyRequest(call, values, isPost));
+        }
+
+        private string EasyRequest(string call,Dictionary<string,string> values,bool isPost=false) {
+            Thread.Sleep(500);
+            if (isPost)
+                return Request(ENDPOINT + call, MapToQuery(values));
+            else
+                return Request(ENDPOINT + call + "?" + MapToQuery(values));
+        }
+
+        // GET request version
+        private string Request(string addr)
+        {
+            var enc = Encoding.GetEncoding("utf-8");
+            var wc = WebRequest.Create(addr);
+            wc.Headers.Add("User-Agent", PC_USER_AGENT);
+            wc.Headers.Add("Origin", "https://mytemp.email");
+            wc.Headers.Add("Accept-Language", "ja,en-US;q=0.8,en;q=0.6,fr;q=0.4,de;q=0.2");
+            wc.Headers.Add("Accept", "application/json, text/plain, */*");
+            wc.Headers.Add("Referer", "https://mytemp.email/2/");
+            wc.Headers.Add("Authority", "api.mytemp.email");
+           
+            wc.Method = "GET";
+            wc.ContentType = "application/x-www-form-urlencoded";
+            var response = wc.GetResponse();
+            using (var download = response.GetResponseStream())
+            {
+                using (var text = new StreamReader(download))
+                {
+                    return text.ReadToEnd();
+                }
+            }
+        }
+
+        // POST request version
+        private string Request(string addr, string data, Dictionary<string, string> header = null)
+        {
+            var enc = Encoding.GetEncoding("utf-8");
+            var payload = enc.GetBytes(data);
+            var wc = WebRequest.Create(addr);
+            wc.Headers.Add("User-Agent", PC_USER_AGENT);
+            wc.Headers.Add("Origin", "https://mytemp.email");
+            wc.Headers.Add("Accept-Language", "ja,en-US;q=0.8,en;q=0.6,fr;q=0.4,de;q=0.2");
+            wc.Headers.Add("Accept", "application/json, text/plain, */*");
+            wc.Headers.Add("Referer", "https://mytemp.email/2/");
+            wc.Headers.Add("Authority", "api.mytemp.email");
+            if (header != null)
+            {
+                foreach (var entry in header)
+                {
+                    wc.Headers.Add(entry.Key, entry.Value);
+                }
+            }
+            wc.Method = "POST";
+            wc.ContentType = "application/x-www-form-urlencoded";
+            wc.ContentLength = payload.Length;
+            using (var post = wc.GetRequestStream())
+            {
+                post.Write(payload, 0, payload.Length);
+            }
+            var response = wc.GetResponse();
+            using (var download = response.GetResponseStream())
+            {
+                using (var text = new StreamReader(download))
+                {
+                    return text.ReadToEnd();
+                }
+            }
+        }
+
+        private static string MapToQuery(Dictionary<string,string> query) {
+            var sb = new StringBuilder();
+            var enc= Encoding.GetEncoding("utf-8");
+            foreach (var entry in query) {
+                if (sb.Length != 0) sb.Append('&');
+                sb.Append(HttpUtility.UrlEncode(entry.Key, enc));
+                sb.Append('=');
+                sb.Append(HttpUtility.UrlEncode(entry.Value, enc));
+            }
+            return sb.ToString();
+        }
+
+        private static string RandomSid() {
+            var rand = new Random();
+            var sb = new StringBuilder();
+            for (int i = 0; i < 7; i++)
+                sb.Append(rand.Next() % 10);
+            return sb.ToString();
         }
     }
 }
