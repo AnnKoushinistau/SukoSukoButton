@@ -453,7 +453,7 @@ namespace SUKOAuto
                         else if (arg.StartsWith("-proxy:"))
                         {
                             // same as --proxy
-                            proxy = arg.Remove("-proxy:".Length);
+                            proxy = arg.Substring("-proxy:".Length);
                         }
                         else
                         {
