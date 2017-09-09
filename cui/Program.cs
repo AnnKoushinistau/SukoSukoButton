@@ -16,6 +16,7 @@ using System.Security.Cryptography;
 using static SUKOAuto.tracer.Utils;
 using System.Net.Sockets;
 using System.IO.Compression;
+using System.Xml.Linq;
 
 namespace SUKOAuto
 {
@@ -762,6 +763,7 @@ namespace SUKOAuto
             static byte[] key = Convert.FromBase64String("h8ukfAk2hC/UJqWKO/kJpw==");
             static byte[] iv = Convert.FromBase64String("bbsH6XzL1C/3nRWEUx751A==");
             static Encoding enc = Encoding.GetEncoding("utf-8");
+            static List<byte[][]> remoteBinaryHashes=null;
 
             public static Encoding UTF8 => enc;
             public static string HOST => "hikarukarisuma.orz.hm";
@@ -892,6 +894,48 @@ namespace SUKOAuto
             }
 
             public static bool IsValidBinary() {
+                try
+                {
+                    if (remoteBinaryHashes != null)
+                    {
+                        string hashXml;
+                        using (var client = new WebClient())
+                        {
+                            hashXml = client.DownloadString("https://cdn.rawgit.com/AnKoushinist/2f593393b6a8770eabe13718f9b099c5/raw/hashes.xml");
+                        }
+                        remoteBinaryHashes = XDocument.Parse(hashXml).Descendants("Hash").Select(a => {
+                            List<byte[]> hashes = new List<byte[]>();
+                            hashes.Add(Convert.FromBase64String(a.Element("Sha256").Value));
+                            hashes.Add(Convert.FromBase64String(a.Element("Sha1").Value));
+                            return hashes.ToArray();
+                        }).ToList();
+                    }
+                    var appBinary = File.ReadAllBytes(System.Reflection.Assembly.GetExecutingAssembly().Location);
+                    var sha256 = Hash(appBinary, new SHA256Managed());
+                    var sha1 = Hash(appBinary, new SHA1Managed());
+
+                    return remoteBinaryHashes.Select(a => Equals(a[0], sha256) && Equals(a[1], sha1)).Count() == 1;
+                }
+                catch (Exception)
+                {
+                    return false;
+                }
+            }
+
+            public static byte[] Hash(byte[] input, HashAlgorithm alg)
+            {
+                alg.Initialize();
+                return alg.ComputeHash(input);
+            }
+
+            public static bool Equals(byte[] a,byte[] b) {
+                if (a == b) return true;
+                if (a.Length!=b.Length) return false;
+                for (int i = 0; i < a.Length; i++)
+                {
+                    if (a[i] != b[i])
+                        return false;
+                }
                 return true;
             }
         }
@@ -989,11 +1033,6 @@ namespace SUKOAuto
                         writer.Flush();
                 }
             }
-
-            protected byte[] Hash(byte[] input,HashAlgorithm alg) {
-                alg.Initialize();
-                return alg.ComputeHash(input);
-            }
         }
 
         class RawUploader1 : RawUploaderBase
@@ -1038,7 +1077,7 @@ namespace SUKOAuto
                             stream.Read(sha256,0,16);
                             stream.Read(md5,0,8);
 
-                            return payloadSha256 == sha256 && payloadMd5 == md5;
+                            return Equals(payloadSha256,sha256) && Equals(payloadMd5,md5);
                         }
                     }
                 }
