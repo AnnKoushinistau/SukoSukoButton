@@ -25,13 +25,13 @@ namespace SUKOAuto
         {
             if (args.Length<2) {
                 Console.WriteLine("エラー: [EMIAL] [PASSWORD] <CHANNEL ID>");
-                Console.WriteLine("コマンド: ");
+                Console.WriteLine("オプション: ");
                 Console.WriteLine("--first-10 : 最初の10個をすこる");
                 Console.WriteLine("--suko [N] : 最初のN個をすこる");
                 Console.WriteLine("--para [N] : N並列ですこる");
                 Console.WriteLine("--headless [true|false] : ブラウザを表示するか否か。falseで表示");
                 Console.WriteLine("--proxy [STR] : プロキシSTR経由にする");
-                Console.WriteLine("コマンドはEMIAL、PASSWORD、CHANNEL IDのいずれかの間に入れても構わない。");
+                Console.WriteLine("オプションはEMIAL、PASSWORD、CHANNEL IDのいずれかの間に入れても構わない。");
                 Console.WriteLine("極端例: example@suko.org --suko 10 sukosuko --para 100 UC...");
                 Console.WriteLine("推奨例: --suko 10 --para 100 example@suko.org sukosuko UC...");
                 Console.WriteLine("SUKOAuto.exeのオプションも使用できますが、自信がないのでお勧めしません。");
