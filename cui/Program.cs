@@ -550,11 +550,7 @@ namespace SUKOAuto
                     subject = subject,
                     text = text
                 });
-                var header = new Dictionary<string, string>
-                {
-                    ["Content-Type"] = "application/json;charset=utf-8"
-                };
-                if ((int)ToJsonObject(Request(ENDPOINT + EML_CREATE + "?" + MapToQuery(query), json.ToString(), header))["ok"] != 1)
+                if ((int)ToJsonObject(Request(ENDPOINT + EML_CREATE + "?" + MapToQuery(query), json.ToString(),ContentType: "application/json;charset=utf-8"))["ok"] != 1)
                     throw new Exception("Sending email failed");
             }
 
@@ -585,12 +581,12 @@ namespace SUKOAuto
             private string Request(string addr)
             {
                 var enc = Encoding.GetEncoding("utf-8");
-                var wc = WebRequest.Create(addr);
-                wc.Headers.Add("User-Agent", PC_USER_AGENT);
+                var wc = WebRequest.CreateHttp(addr);
+                wc.UserAgent = PC_USER_AGENT;
                 wc.Headers.Add("Origin", "https://mytemp.email");
                 wc.Headers.Add("Accept-Language", "ja,en-US;q=0.8,en;q=0.6,fr;q=0.4,de;q=0.2");
-                wc.Headers.Add("Accept", "application/json, text/plain, */*");
-                wc.Headers.Add("Referer", "https://mytemp.email/2/");
+                wc.Accept = "application/json, text/plain, */*";
+                wc.Referer = "https://mytemp.email/2/";
                 wc.Headers.Add("Authority", "api.mytemp.email");
 
                 wc.Method = "GET";
@@ -606,17 +602,18 @@ namespace SUKOAuto
             }
 
             // POST request version
-            private string Request(string addr, string data, Dictionary<string, string> header = null)
+            private string Request(string addr, string data, Dictionary<string, string> header = null,string ContentType=null)
             {
                 var enc = Encoding.GetEncoding("utf-8");
                 var payload = enc.GetBytes(data);
-                var wc = WebRequest.Create(addr);
-                wc.Headers.Add("User-Agent", PC_USER_AGENT);
+                var wc = WebRequest.CreateHttp(addr);
+                wc.UserAgent = PC_USER_AGENT;
                 wc.Headers.Add("Origin", "https://mytemp.email");
                 wc.Headers.Add("Accept-Language", "ja,en-US;q=0.8,en;q=0.6,fr;q=0.4,de;q=0.2");
-                wc.Headers.Add("Accept", "application/json, text/plain, */*");
-                wc.Headers.Add("Referer", "https://mytemp.email/2/");
+                wc.Accept = "application/json, text/plain, */*";
+                wc.Referer = "https://mytemp.email/2/";
                 wc.Headers.Add("Authority", "api.mytemp.email");
+
                 if (header != null)
                 {
                     foreach (var entry in header)
@@ -625,7 +622,7 @@ namespace SUKOAuto
                     }
                 }
                 wc.Method = "POST";
-                wc.ContentType = "application/x-www-form-urlencoded";
+                wc.ContentType = ContentType!=null?ContentType:"application/x-www-form-urlencoded";
                 wc.ContentLength = payload.Length;
                 using (var post = wc.GetRequestStream())
                 {
