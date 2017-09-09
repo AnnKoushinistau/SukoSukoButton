@@ -573,7 +573,7 @@ namespace SUKOAuto
 
             private string Task => (taskCount++).ToString();
 
-            private string Tt => (DateTime.Now - sessionStarted).Seconds.ToString();
+            private string Tt => ((long)(DateTime.Now - sessionStarted).TotalSeconds).ToString();
 
             private JObject ToJsonObject(string json)
             {
