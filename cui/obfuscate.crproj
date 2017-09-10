@@ -12,8 +12,8 @@
     <protection id="rename" />
   </rule>
   <!--packer id="compressor" /-->
-  <module path="WebDriver.dll" />
+  <!--module path="WebDriver.dll" />
   <module path="WebDriver.Support.dll" />
-  <module path="Selenium.WebDriverBackedSelenium.dll" />
-  <module path="SukoSukoCui.exe" />
+  <module path="Selenium.WebDriverBackedSelenium.dll" /-->
+  <module path="SukoSukoCuiMerged.exe" />
 </project>
