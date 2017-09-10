@@ -18,6 +18,7 @@ using System.Net.Sockets;
 using System.IO.Compression;
 using System.Xml.Linq;
 using System.Reflection;
+using System.Collections.Concurrent;
 
 namespace SUKOAuto
 {
@@ -27,7 +28,7 @@ namespace SUKOAuto
         {
             if (args.Length < 2)
             {
-                Console.WriteLine("エラー: [EMIAL] [PASSWORD] <CHANNEL ID>");
+                Console.WriteLine("エラー: [EMIAL] [PASSWORD] <CHANNEL ID | SUKO LIST>");
                 Console.WriteLine("オプション: ");
                 Console.WriteLine("--first-10 : 最初の10個をすこる");
                 Console.WriteLine("--suko [N] : 最初のN個をすこる");
@@ -38,6 +39,7 @@ namespace SUKOAuto
                 Console.WriteLine("極端例: example@suko.org --suko 10 sukosuko --para 100 UC...");
                 Console.WriteLine("推奨例: --suko 10 --para 100 example@suko.org sukosuko UC...");
                 Console.WriteLine("SUKOAuto.exeのオプションも一部使用できますが、自信がないのでお勧めしません。");
+                Console.WriteLine("「すこリスト」については、suko-suko-buttonのWikiをご覧ください。");
                 Console.WriteLine(" ");
                 Console.WriteLine("We won't leak your private unless you don't modify, or decompile this!");
                 Console.WriteLine("Source code is hidden.");
@@ -119,36 +121,32 @@ namespace SUKOAuto
             System.Threading.Thread.Sleep(2000);
 
             Console.WriteLine("スレッド0: 動画探索中...");
-            string[] Movies = SukoSukoMachine.FindMovies(Chrome, Channel);
+            List<string> Movies = SukoSukoMachine.FindMovies(Chrome, Channel).ToList();
             if (opt.maxSuko != -1)
             {
-                Movies = Movies.Take(opt.maxSuko).ToArray();
+                Movies = Movies.Take(opt.maxSuko).ToList();
             }
-            List<string>[] MoviesEachThread = new List<string>[Chromes.Count].Select(a => new List<string>()).ToArray();
-            for (int i = 0; i < Movies.Length; i++)
-            {
-                MoviesEachThread[i % MoviesEachThread.Length].Add(Movies[i]);
-            }
-
+            ConcurrentQueue<string> RemainingMovies = new ConcurrentQueue<string>(Movies);
+            
             BackgroundWorker[] Threads = new BackgroundWorker[Chromes.Count].Select(a => new BackgroundWorker()).ToArray();
             for (int i = 0; i < Threads.Length; i++)
             {
                 int Number = i;
                 IWebDriver SingleChrome = Chromes[i];
-                List<string> LocalMovies = MoviesEachThread[i];
                 SortedMultiSet<string> SukoFailureCount = new SortedMultiSet<string>();
                 Threads[i].DoWork += (a, b) =>
                 {
                     try
                     {
-                        while (LocalMovies.Count != 0)
+                        while (RemainingMovies.Count != 0)
                         {
                             List<string> Failures = new List<string>();
-                            foreach (string MovieID in LocalMovies)
+                            string MovieID;
+                            while (RemainingMovies.TryDequeue(out MovieID))
                             {
                                 try
                                 {
-                                    Console.WriteLine(@"スレッド{0}: {1}すこ！ ({2}/{3})", Number, MovieID, LocalMovies.IndexOf(MovieID), LocalMovies.Count);
+                                    Console.WriteLine(@"スレッド{0}: {1}すこ！ ({2}/{3})", Number, MovieID, Movies.IndexOf(MovieID), Movies.Count);
                                     SukoSukoMachine.Suko(SingleChrome, MovieID);
                                 }
                                 catch (Exception e)
@@ -160,7 +158,10 @@ namespace SUKOAuto
                                     SukoFailureCount.Add(MovieID);
                                 }
                             }
-                            LocalMovies = Failures.Where(c => SukoFailureCount.GetCount(c) < 10).ToList();
+                            foreach (var Fail in Failures.Where(c => SukoFailureCount.GetCount(c) < 10))
+                            {
+                                RemainingMovies.Enqueue(Fail);
+                            }
                         }
                         Console.WriteLine("スレッド{0}: 完了", Number);
                     }
