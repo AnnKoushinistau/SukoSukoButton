@@ -94,7 +94,7 @@ namespace SUKOAuto
             var ChromeOptions = new ChromeOptions();
             if (opt.proxy != null)
             {
-                ChromeOptions.AddArguments("--proxy-server=" + opt.proxy);
+                ChromeOptions.AddArguments("--proxy-server=http://" + opt.proxy);
             }
             if (opt.headless)
             {
@@ -272,12 +272,14 @@ namespace SUKOAuto
         }
     }
 
-    class SukoSukoMachine
+    public class SukoSukoMachine
     {
         const string URL_LOGIN = @"https://accounts.google.com/ServiceLogin";
         const string URL_MOVIE = @"https://www.youtube.com/watch?v={0}";
         const string URL_CHANNEL = @"https://www.youtube.com/channel/{0}/videos";
+        const string URL_PLAYLIST = @"https://www.youtube.com/playlist?list={0}";
 
+        [Obsolete]
         public static string[] FindMovies(IWebDriver Chrome, string Channel)
         {
             Chrome.Url = string.Format(URL_CHANNEL, Channel);
@@ -326,6 +328,52 @@ namespace SUKOAuto
                 .SelectMany(A => A)
                 .ToArray();
             // return RegExp(Chrome.PageSource, @"(?<=<a href=""/watch\?v=)[\dA-Za-z_-]+");
+        }
+
+        public static string[] FindMoviesInPlayList(IWebDriver Chrome, string Channel)
+        {
+            Chrome.Url = string.Format(URL_PLAYLIST, Channel);
+            ReLogin(Chrome, Chrome.Url);
+
+            System.Threading.Thread.Sleep(5000);
+
+
+            // https://stackoverflow.com/questions/18572651/selenium-scroll-down-a-growing-page
+            long scrollHeight = 0;
+            int sameHeight = 0;
+            IJavaScriptExecutor js = (IJavaScriptExecutor)Chrome;
+
+            do
+            {
+                var newScrollHeight = (long)js.ExecuteScript("window.scrollTo(0, document.body.scrollHeight); return document.body.scrollHeight;");
+
+                if (newScrollHeight == scrollHeight)
+                {
+                    if (sameHeight > 10)
+                    {
+                        sameHeight = 0;
+                        break;
+                    }
+                    else
+                    {
+                        sameHeight++;
+                    }
+                }
+                else
+                {
+                    sameHeight = 0;
+                    scrollHeight = newScrollHeight;
+                    System.Threading.Thread.Sleep(3000);
+                }
+            } while (true);
+
+            return Chrome.FindElements(By.XPath("//a[contains(@href,\"/watch?v=\")]"))
+                .Select(a => a.GetAttribute("href"))
+                .Distinct()
+                .Select(a => RegExp(a, "(?<=.+/watch\\?v=)[\\dA-Za-z_-]+"))
+                .SelectMany(A => A)
+                .Distinct()
+                .ToArray();
         }
 
         public static void Suko(IWebDriver Chrome, string MovieID)
@@ -426,6 +474,11 @@ namespace SUKOAuto
             }
 
             return listResult.ToArray();
+        }
+
+        public void FindMoviesInPlayList()
+        {
+            throw new NotImplementedException();
         }
     }
 
