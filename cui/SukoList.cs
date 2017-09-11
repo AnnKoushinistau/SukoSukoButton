@@ -50,7 +50,7 @@ namespace SUKOAuto.sukoList
         static string ChannelToPlayList(string Channel)
         {
             if (!Channel.StartsWith("UC"))
-                throw new ArgumentException($"チャンネル\"{Channel}\"は不正です。再生リストと間違えていませんか?");
+                throw new ArgumentException($@"チャンネル""{Channel}""は不正です。再生リストと間違えていませんか?");
             var Buf=Channel.ToCharArray();
             Buf[1] = 'U';
             return new string(Buf);
