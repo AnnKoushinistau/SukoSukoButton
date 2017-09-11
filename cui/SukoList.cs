@@ -225,5 +225,12 @@ namespace SUKOAuto.sukoList
         {
             return Parse(new StringReader(xml));
         }
+
+        public static List<string> ExpandSukoListEntries(IEnumerable<ISukoListEntry> entries) {
+            return entries
+                .Select(a=>a.GetProcessedMovies())
+                .SelectMany(A=>A)
+                .ToList();
+        }
     }
 }
