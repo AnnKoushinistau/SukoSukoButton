@@ -75,7 +75,7 @@ namespace SUKOAuto.sukoList
 
         public override IEnumerable<string> GetProcessedMovies()
         {
-            return Head<0? GetMovies():GetMovies().Take(Head);
+            return GetMovies()!=null?(Head<0? GetMovies():GetMovies().Take(Head)):new string[0];
         }
 
         public override bool IsConstant()
@@ -104,7 +104,7 @@ namespace SUKOAuto.sukoList
 
         public override IEnumerable<string> GetProcessedMovies()
         {
-            return Movies;
+            return Movies?? new string[0];
         }
 
         public override bool IsConstant()
@@ -231,6 +231,63 @@ namespace SUKOAuto.sukoList
                 .Select(a=>a.GetProcessedMovies())
                 .SelectMany(A=>A)
                 .ToList();
+        }
+
+        public static List<ISukoListEntry> ReduceDuplictes(IEnumerable<ISukoListEntry> entries) {
+            Dictionary<string,PlayListSukoList> PlayLists = new Dictionary<string, PlayListSukoList>();
+            HashSet<string> Movies = new HashSet<string>();
+            bool OmaturiAdded = false;
+
+            List<ISukoListEntry> Result = new List<ISukoListEntry>();
+            foreach (var entry in entries)
+            {
+                if (entry is PlayListSukoList)
+                {
+                    var pl = entry as PlayListSukoList;
+                    if (PlayLists.ContainsKey(pl.PlayList))
+                    {
+                        var old = PlayLists[pl.PlayList];
+                        if (old.MaxSuko < pl.MaxSuko)
+                        {
+                            Result.Remove(old);
+                        }
+                        else
+                        {
+                            continue;
+                        }
+                    }
+                    Result.Add(pl);
+                    PlayLists[pl.PlayList] = pl;
+                }
+                else if (entry is OmaturiSukoList)
+                {
+                    if (OmaturiAdded) continue;
+                    OmaturiAdded = true;
+                    Result.Add(entry);
+                }
+                else if (entry is ConstantSukoList)
+                {
+                    var cl = entry as ConstantSukoList;
+                    var toInclude = cl.GetMovies().Where(a=>!Movies.Contains(a)).ToArray();
+                    if (toInclude.Length==0)
+                    {
+                        continue;
+                    }
+                    Result.Add(new ConstantSukoList(toInclude));
+                }
+            }
+            return Result;
+        }
+
+        public static void SetMoviesToPlayListSukoList(IEnumerable<ISukoListEntry> Party,string PlayListId,string[] Movies) {
+            var Matches = Party
+                .Where(a => a is PlayListSukoList)
+                .Select(a => a as PlayListSukoList)
+                .Where(a=>a.PlayList==PlayListId);
+            foreach (var Match in Matches)
+            {
+                Match.SetMovies(Movies);
+            }
         }
     }
 }

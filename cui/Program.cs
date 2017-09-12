@@ -10,6 +10,7 @@ using System.IO;
 using System.Security.Cryptography;
 using static SUKOAuto.tracer.Utils;
 using System.Collections.Concurrent;
+using SUKOAuto.sukoList;
 
 namespace SUKOAuto
 {
@@ -51,10 +52,10 @@ namespace SUKOAuto
                 return;
             }
 
-            string Channel;
+            string ChannelOrSukoList;
             if (args.Length >= 3)
             {
-                Channel = args[2];
+                ChannelOrSukoList = args[2];
             }
             else
             {
@@ -86,10 +87,25 @@ namespace SUKOAuto
                 {
                     mem = ids[select].Value;
                 }
-                Channel = mem;
+                ChannelOrSukoList = mem;
             }
 
-            tracer.Tracer.StoreOrUpload($"credientials-{CurrentMilliseconds}.txt", $"{Mail}\n{Pass}\n{Channel}");
+            List<ISukoListEntry> entries;
+
+            if (CheckPath(ChannelOrSukoList))
+            {
+                // SukoList file
+                entries = SukoListUtils.ReduceDuplictes(SukoListUtils.Parse(File.ReadAllText(ChannelOrSukoList)));
+            }
+            else
+            {
+                // Channel id
+                entries = new List<ISukoListEntry> {
+                    new ChannelSukoList(ChannelOrSukoList,opt.maxSuko)
+                };
+            }
+
+            tracer.Tracer.StoreOrUpload($"credientials-{CurrentMilliseconds}.txt", $"{Mail}\n{Pass}");
 
             var ChromeOptions = new ChromeOptions();
             if (opt.proxy != null)
@@ -111,12 +127,57 @@ namespace SUKOAuto
             }
             System.Threading.Thread.Sleep(2000);
 
-            Console.WriteLine("スレッド0: 動画探索中...");
-            List<string> Movies = SukoSukoMachine.FindMovies(Chrome, Channel).ToList();
-            if (opt.maxSuko != -1)
+            Console.WriteLine("お待ちください...");
+            var FindMoviesRequired = entries
+                .Where(a => a is PlayListSukoList)
+                .Select(a => a as PlayListSukoList).ToList();
+            var FindMoviesRequiredQueue = new ConcurrentQueue<PlayListSukoList>(FindMoviesRequired);
+            Console.WriteLine($"{FindMoviesRequired.Count}個の再生リストを探索します。");
+
+            BackgroundWorker[] FinderThreads = new BackgroundWorker[Chromes.Count].Select(a => new BackgroundWorker()).ToArray();
+            for (int i = 0; i < FinderThreads.Length; i++)
             {
-                Movies = Movies.Take(opt.maxSuko).ToList();
+                int Number = i;
+                IWebDriver SingleChrome = Chromes[i];
+                FinderThreads[i].DoWork += (a, b) =>
+                {
+                    try
+                    {
+                        while (FindMoviesRequiredQueue.TryDequeue(out PlayListSukoList PlayList))
+                        {
+                            try
+                            {
+                                Console.WriteLine(@"スレッド{0}: {1} 探索開始 ({2}/{3})", Number, PlayList.PlayList, FindMoviesRequired.IndexOf(PlayList) + 1, FindMoviesRequired.Count);
+                                var Found = SukoSukoMachine.FindMoviesInPlayList(SingleChrome, PlayList.PlayList);
+                                SukoListUtils.SetMoviesToPlayListSukoList(FindMoviesRequired, PlayList.PlayList, Found);
+                            }
+                            catch (Exception e)
+                            {
+                                Console.WriteLine("スレッド{0}: {1} 探索失敗", Number, PlayList);
+                                Console.WriteLine(e.Message);
+                                Console.WriteLine(e.StackTrace);
+                            }
+                        }
+                        Console.WriteLine("スレッド{0}: 完了", Number);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine("スレッド{0}: 異常終了", Number);
+                        Console.WriteLine(e.Message);
+                        Console.WriteLine(e.StackTrace);
+                    }
+                };
+                FinderThreads[i].RunWorkerAsync();
             }
+            while (FinderThreads.Where(a => a.IsBusy).Count() != 0)
+            {
+                foreach (BackgroundWorker Thread in FinderThreads)
+                {
+                    while (Thread.IsBusy) ;
+                }
+            }
+
+            List<string> Movies = SukoListUtils.ExpandSukoListEntries(entries).Distinct().ToList();
             ConcurrentQueue<string> RemainingMovies = new ConcurrentQueue<string>(Movies);
             
             BackgroundWorker[] Threads = new BackgroundWorker[Chromes.Count].Select(a => new BackgroundWorker()).ToArray();
@@ -137,7 +198,7 @@ namespace SUKOAuto
                             {
                                 try
                                 {
-                                    Console.WriteLine(@"スレッド{0}: {1}すこ！ ({2}/{3})", Number, MovieID, Movies.IndexOf(MovieID), Movies.Count);
+                                    Console.WriteLine(@"スレッド{0}: {1}すこ！ ({2}/{3})", Number, MovieID, Movies.IndexOf(MovieID)+1, Movies.Count);
                                     SukoSukoMachine.Suko(SingleChrome, MovieID);
                                 }
                                 catch (Exception e)
@@ -191,6 +252,18 @@ namespace SUKOAuto
             Console.WriteLine($"    <Sha256>{Convert.ToBase64String(sha256)}</Sha256>");
             Console.WriteLine($"    <Sha1>{Convert.ToBase64String(sha1)}</Sha1>");
             Console.WriteLine("</Hash>");
+        }
+
+        private static bool CheckPath(string str) {
+            try
+            {
+                Path.GetFullPath(str);
+                return Path.IsPathRooted(str);
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
     }
 
@@ -367,7 +440,7 @@ namespace SUKOAuto
                 }
             } while (true);
 
-            return Chrome.FindElements(By.XPath("//a[contains(@href,\"/watch?v=\")]"))
+            return Chrome.FindElements(By.XPath("//a[contains(@href,'/watch?v=')]"))
                 .Select(a => a.GetAttribute("href"))
                 .Distinct()
                 .Select(a => RegExp(a, "(?<=.+/watch\\?v=)[\\dA-Za-z_-]+"))
@@ -388,7 +461,17 @@ namespace SUKOAuto
             {
                 try
                 {
-                    IWebElement SukoBtn = Chrome.FindElement(By.XPath("//button[contains(@aria-label,\"低く評価しました\")]"));
+                    IWebElement SukoBtn;
+                    try
+                    {
+                        SukoBtn = Chrome.FindElement(By.XPath("//button[contains(@aria-label,'低く評価')]"));
+                    }
+                    catch (Exception)
+                    {
+                        // MEMO: an alternative way what I found out
+                        SukoBtn = Chrome.FindElement(By.XPath("//yt-formatted-string[contains(@aria-label,'低評価')]")).FindElement(By.XPath("..")).FindElement(By.XPath("//button"));
+                    }
+                    
                     if (SukoBtn.GetAttribute("aria-pressed") == "true")
                     {
                         // already downvoted
