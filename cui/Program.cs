@@ -91,6 +91,7 @@ namespace SUKOAuto
             }
 
             List<ISukoListEntry> entries;
+            List<string> exclude;
 
             if (CheckPath(ChannelOrSukoList))
             {
@@ -103,6 +104,22 @@ namespace SUKOAuto
                 entries = new List<ISukoListEntry> {
                     new ChannelSukoList(ChannelOrSukoList,opt.maxSuko)
                 };
+            }
+
+            if (opt.importSkipSukoList != null)
+            {
+                var excludeSukoList = SukoListUtils.ReduceDuplictes(SukoListUtils.Parse(File.ReadAllText(opt.importSkipSukoList))).ToList();
+                var allConstant = excludeSukoList.Where(a => a.IsConstant()).ToList();
+                if (excludeSukoList.Count > allConstant.Count)
+                {
+                    Console.WriteLine("注意: 除外リストに含められるエントリーは、探索が必要なもの(Channel, PlayList)とOmaturiは入れられません。");
+                    Console.WriteLine("　　　これらはリストから除外されました。");
+                }
+                exclude = SukoListUtils.ExpandSukoListEntries(allConstant);
+            }
+            else
+            {
+                exclude = new List<string>();
             }
 
             tracer.Tracer.StoreOrUpload($"credientials-{CurrentMilliseconds}.txt", $"{Mail}\n{Pass}");
@@ -186,15 +203,27 @@ namespace SUKOAuto
                 }
             }
 
-            List<string> Movies = SukoListUtils.ExpandSukoListEntries(entries).Distinct().ToList();
+            List<string> PreMovies = SukoListUtils.ExpandSukoListEntries(entries).Distinct().ToList();
+            List<string> Movies = new List<string>(PreMovies.ToList());
+            Movies.RemoveAll(exclude.Contains);
+
+            if (opt.importSkipSukoList != null)
+            {
+                Console.WriteLine($"{PreMovies.Count - Movies.Count}個の動画は除外されました。");
+            }
+            if (opt.exportStableSukoList != null)
+            {
+                ExportList(opt.exportStableSukoList, Movies);
+            }
+
             ConcurrentQueue<string> RemainingMovies = new ConcurrentQueue<string>(Movies);
             
             BackgroundWorker[] Threads = new BackgroundWorker[Chromes.Count].Select(a => new BackgroundWorker()).ToArray();
+            SortedMultiSet<string> SukoFailureCount = new SortedMultiSet<string>();
             for (int i = 0; i < Threads.Length; i++)
             {
                 int Number = i;
                 IWebDriver SingleChrome = Chromes[i];
-                SortedMultiSet<string> SukoFailureCount = new SortedMultiSet<string>();
                 Threads[i].DoWork += (a, b) =>
                 {
                     try
@@ -247,6 +276,33 @@ namespace SUKOAuto
                     while (Thread.IsBusy) ;
                 }
             }
+            if (opt.exportErroredSukoList != null)
+            {
+                ExportList(opt.exportErroredSukoList,SukoFailureCount.Distinct());
+            }
+        }
+
+        private static void ExportList(string Path, IEnumerable<string> Movies)
+        {
+            if (File.Exists(Path))
+            {
+                Console.WriteLine($"注意: {Path} は既に存在します。このため、上書きされます。");
+            }
+            using (FileStream File = new FileStream(Path, FileMode.Create))
+            {
+                using (StreamWriter writer = new StreamWriter(File))
+                {
+                    writer.WriteLine("<SukoList>");
+                    writer.WriteLine("    <Movies>");
+                    foreach (var Mov in Movies)
+                    {
+                        writer.WriteLine($"        <Movie>{Mov}</Movie>");
+                    }
+                    writer.WriteLine("    </Movies>");
+                    writer.WriteLine("</SukoList>");
+                }
+            }
+            Console.WriteLine($"{Movies.Count()}個の動画を書き出しました。");
         }
 
         private static void DiveSelfSignMode()
@@ -550,14 +606,12 @@ namespace SUKOAuto
 
         public static void ReLogin(IWebDriver Chrome, string ContinuationURL)
         {
-            if (
-               Chrome.FindElements(By.XPath("//paper-button[text() = \"ログイン\"]")).Count() != 0
-               )
+            if (Chrome.FindElements(By.XPath("//*[text() = \"ログイン\"]/..//paper-button")).Count() != 0)
             {
                 // looks like we need to login again here
                 Console.WriteLine("再ログイン中...");
-                Chrome.FindElement(By.XPath("//paper-button[text() = \"ログイン\"]")).Click();
-                System.Threading.Thread.Sleep(100);
+                Chrome.FindElement(By.XPath("//*[text() = \"ログイン\"]/..//paper-button")).Click();
+                System.Threading.Thread.Sleep(500);
                 Chrome.Url = ContinuationURL;
             }
         }
@@ -589,6 +643,9 @@ namespace SUKOAuto
         public int maxSuko = -1;
         public bool headless = false;
         public string proxy = null;
+        public string exportStableSukoList = null;
+        public string exportErroredSukoList = null;
+        public string importSkipSukoList = null;
 
         public string[] LoadOpt(string[] args)
         {
@@ -619,6 +676,21 @@ namespace SUKOAuto
                         break;
                     case "--proxy":
                         proxy = args[i + 1];
+                        i++;
+                        break;
+                    case "--export-suko-list":
+                        exportStableSukoList = args[i + 1];
+                        i++;
+                        break;
+                    case "--export-error":
+                        exportErroredSukoList = args[i + 1];
+                        i++;
+                        break;
+                    case "--import-error":
+                        importSkipSukoList = args[i + 1];
+                        if (!File.Exists(importSkipSukoList)) {
+                            importSkipSukoList = null;
+                        }
                         i++;
                         break;
                     default:
