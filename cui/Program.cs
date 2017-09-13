@@ -110,7 +110,16 @@ namespace SUKOAuto
             var ChromeOptions = new ChromeOptions();
             if (opt.proxy != null)
             {
-                ChromeOptions.AddArguments("--proxy-server=http://" + opt.proxy);
+                string proxy;
+                if (opt.proxy.Contains("://"))
+                {
+                    proxy = opt.proxy;
+                }
+                else
+                {
+                    proxy = "http://" + opt.proxy;
+                }
+                ChromeOptions.AddArguments("--proxy-server=" + proxy);
             }
             if (opt.headless)
             {
