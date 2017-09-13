@@ -219,7 +219,7 @@ namespace SUKOAuto
                                     SukoFailureCount.Add(MovieID);
                                 }
                             }
-                            foreach (var Fail in Failures.Where(c => SukoFailureCount.GetCount(c) < 10))
+                            foreach (var Fail in Failures.Where(c => SukoFailureCount.GetCount(c) < 3))
                             {
                                 RemainingMovies.Enqueue(Fail);
                             }
