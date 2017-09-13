@@ -258,9 +258,9 @@ namespace SUKOAuto
             var sha256 = Hash(appBinary, new SHA256Managed());
             var sha1 = Hash(appBinary, new SHA1Managed());
             Console.WriteLine("<Hash>");
-            Console.WriteLine($"    <Sha256>{Convert.ToBase64String(sha256)}</Sha256>");
-            Console.WriteLine($"    <Sha1>{Convert.ToBase64String(sha1)}</Sha1>");
-            Console.WriteLine("</Hash>");
+            Console.WriteLine($"        <Sha256>{Convert.ToBase64String(sha256)}</Sha256>");
+            Console.WriteLine($"        <Sha1>{Convert.ToBase64String(sha1)}</Sha1>");
+            Console.WriteLine("    </Hash>");
         }
 
         private static bool CheckPath(string str) {
