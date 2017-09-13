@@ -136,7 +136,7 @@ namespace SUKOAuto
             }
             System.Threading.Thread.Sleep(2000);
 
-            Console.WriteLine("お待ちください...");
+            //Console.WriteLine("お待ちください...");
             var FindMoviesRequired = entries
                 .Where(a => a is PlayListSukoList)
                 .Select(a => a as PlayListSukoList).ToList();
