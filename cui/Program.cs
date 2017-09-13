@@ -28,8 +28,8 @@ namespace SUKOAuto
                 Console.WriteLine("--headless [true|false] : ブラウザを表示するか否か。falseで表示");
                 Console.WriteLine("--proxy [STR] : プロキシSTR経由にする");
                 Console.WriteLine("オプションはEMIAL、PASSWORD、CHANNEL IDのいずれかの間に入れても構わない。");
-                Console.WriteLine("極端例: example@suko.org --suko 10 sukosuko --para 100 UC...");
-                Console.WriteLine("推奨例: --suko 10 --para 100 example@suko.org sukosuko UC...");
+                Console.WriteLine("極端例: example@suko.org --suko 10 sukosuko --para 100 C:...");
+                Console.WriteLine("推奨例: --suko 10 --para 100 example@suko.org sukosuko C:...");
                 Console.WriteLine("SUKOAuto.exeのオプションも一部使用できますが、自信がないのでお勧めしません。");
                 Console.WriteLine("「すこリスト」については、suko-suko-buttonのWikiをご覧ください。");
                 Console.WriteLine(" ");
