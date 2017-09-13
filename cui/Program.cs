@@ -480,12 +480,12 @@ namespace SUKOAuto
                         try
                         {
                             // MEMO: an alternative way what I found out
-                            SukoBtn = Chrome.FindElement(By.XPath("//yt-formatted-string[contains(@aria-label,'低評価')]")).FindElement(By.XPath("..")).FindElement(By.XPath("//button"));
+                            SukoBtn = Chrome.FindElement(By.XPath("//yt-formatted-string[contains(@aria-label,'低評価')]/..//button"));
                         }
                         catch (Exception)
                         {
                             // MEMO: force search
-                            SukoBtn = Chrome.FindElement(By.XPath("//*[contains(@aria-label,'低評価') or contains(@aria-label,'低く評価')]//button"));
+                            SukoBtn = Chrome.FindElement(By.XPath("//*[contains(@aria-label,'低評価') or contains(@aria-label,'低く評価')]/..//button"));
                         }
                     }
 
