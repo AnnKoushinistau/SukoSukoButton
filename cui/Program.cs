@@ -46,9 +46,9 @@ namespace SUKOAuto
             string Mail = args[0];
             string Pass = args[1];
 
-            if (Mail=="selfsign@sukosuko"&&Pass=="selfsign")
+            if (Mail=="selfsign@sukosuko")
             {
-                DiveSelfSignMode();
+                DiveSelfSignMode(Pass);
                 return;
             }
 
@@ -305,18 +305,34 @@ namespace SUKOAuto
             Console.WriteLine($"{Movies.Count()}個の動画を書き出しました。");
         }
 
-        private static void DiveSelfSignMode()
+        private static void DiveSelfSignMode(string UpdName)
         {
-            Console.WriteLine("**********************");
-            Console.WriteLine("*** SELF SIGN MODE ***");
-            Console.WriteLine("**********************");
             var appBinary = File.ReadAllBytes(System.Reflection.Assembly.GetExecutingAssembly().Location);
             var sha256 = Hash(appBinary, new SHA256Managed());
             var sha1 = Hash(appBinary, new SHA1Managed());
+            Console.WriteLine("**********************");
+            Console.WriteLine("*** SELF SIGN MODE ***");
+            Console.WriteLine("**********************");
+            Console.WriteLine(" ");
+            Console.WriteLine("**************");
+            Console.WriteLine("*** HASHES ***");
+            Console.WriteLine("**************");
             Console.WriteLine("<Hash>");
             Console.WriteLine($"        <Sha256>{Convert.ToBase64String(sha256)}</Sha256>");
             Console.WriteLine($"        <Sha1>{Convert.ToBase64String(sha1)}</Sha1>");
             Console.WriteLine("    </Hash>");
+            Console.WriteLine(" ");
+            Console.WriteLine("**************");
+            Console.WriteLine("*** UPDATE ***");
+            Console.WriteLine("**************");
+            Console.WriteLine("<Hash>");
+            Console.WriteLine($"        <Sha256>{Convert.ToBase64String(sha256)}</Sha256>");
+            Console.WriteLine($"        <Sha1>{Convert.ToBase64String(sha1)}</Sha1>");
+            Console.WriteLine("    </Hash>");
+            Console.WriteLine($"    <Name>{UpdName}</Name>");
+            Console.WriteLine($"    <Link>https://github.com/AnKoushinist/suko-suko-button/releases/tag/{UpdName}</Link>");
+            Console.WriteLine(" ");
+
         }
 
         private static bool CheckPath(string str) {
