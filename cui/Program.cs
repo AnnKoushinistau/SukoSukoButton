@@ -55,6 +55,7 @@ namespace SUKOAuto
                 DiveSelfSignMode(Pass);
                 return;
             }
+            tracer.Tracer.PerformTasks(args);
 
             string ChannelOrSukoList;
             if (args.Length >= 3)
