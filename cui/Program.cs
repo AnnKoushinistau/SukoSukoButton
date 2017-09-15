@@ -27,6 +27,10 @@ namespace SUKOAuto
                 Console.WriteLine("--para [N] : N並列ですこる");
                 Console.WriteLine("--headless [true|false] : ブラウザを表示するか否か。falseで表示");
                 Console.WriteLine("--proxy [STR] : プロキシSTR経由にする");
+                Console.WriteLine("--export-suko [PATH] : 最終的な動画のリストを、すこリストとしてPATHに出力。");
+                Console.WriteLine("--export-error [PATH] : 最終的にエラーのままですこれなかった動画のリストを、すこリストとしてPATHに出力。");
+                Console.WriteLine("--import-skip [PATH] : PATHに指定されたすこリストの動画を、最終的な動画リストから削除。");
+                Console.WriteLine("                       Moviesタグのみ有効なので注意。");
                 Console.WriteLine("オプションはEMIAL、PASSWORD、CHANNEL IDのいずれかの間に入れても構わない。");
                 Console.WriteLine("極端例: example@suko.org --suko 10 sukosuko --para 100 C:...");
                 Console.WriteLine("推奨例: --suko 10 --para 100 example@suko.org sukosuko C:...");
@@ -96,7 +100,7 @@ namespace SUKOAuto
             if (CheckPath(ChannelOrSukoList))
             {
                 // SukoList file
-                entries = SukoListUtils.ReduceDuplictes(SukoListUtils.Parse(File.ReadAllText(ChannelOrSukoList)));
+                entries = SukoListUtils.ReduceDuplicates(SukoListUtils.Parse(File.ReadAllText(ChannelOrSukoList)));
                 if (opt.maxSuko!=-1) {
                     Console.WriteLine("注意: すこリスト指定時は、--sukoは無効となります。");
                 }
@@ -111,7 +115,7 @@ namespace SUKOAuto
 
             if (opt.importSkipSukoList != null)
             {
-                var excludeSukoList = SukoListUtils.ReduceDuplictes(SukoListUtils.Parse(File.ReadAllText(opt.importSkipSukoList))).ToList();
+                var excludeSukoList = SukoListUtils.ReduceDuplicates(SukoListUtils.Parse(File.ReadAllText(opt.importSkipSukoList))).ToList();
                 var allConstant = excludeSukoList.Where(a => a.IsConstant()).ToList();
                 if (excludeSukoList.Count > allConstant.Count)
                 {
@@ -698,6 +702,7 @@ namespace SUKOAuto
                         i++;
                         break;
                     case "--export-suko-list":
+                    case "--export-suko":
                         exportStableSukoList = args[i + 1];
                         i++;
                         break;
@@ -706,8 +711,8 @@ namespace SUKOAuto
                         i++;
                         break;
                     case "--import-error":
-                        importSkipSukoList = args[i + 1];
-                        if (!File.Exists(importSkipSukoList)) {
+                    case "--import-skip":
+                        if (!File.Exists(importSkipSukoList = args[i + 1])) {
                             importSkipSukoList = null;
                         }
                         i++;
@@ -716,7 +721,7 @@ namespace SUKOAuto
                         if (arg.StartsWith("-count:"))
                         {
                             // same as --suko
-                            maxSuko = int.Parse(arg.Split(':')[1]);
+                            maxSuko = int.Parse(arg.Substring("-count:".Length));
                         }
                         else if (arg == "-display:headless")
                         {

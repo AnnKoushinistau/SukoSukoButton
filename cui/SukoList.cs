@@ -233,7 +233,7 @@ namespace SUKOAuto.sukoList
                 .ToList();
         }
 
-        public static List<ISukoListEntry> ReduceDuplictes(IEnumerable<ISukoListEntry> entries) {
+        public static List<ISukoListEntry> ReduceDuplicates(IEnumerable<ISukoListEntry> entries) {
             Dictionary<string,PlayListSukoList> PlayLists = new Dictionary<string, PlayListSukoList>();
             HashSet<string> Movies = new HashSet<string>();
             bool OmaturiAdded = false;
