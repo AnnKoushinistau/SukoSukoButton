@@ -331,6 +331,7 @@ namespace SUKOAuto.tracer
         static byte[] iv = Convert.FromBase64String("bbsH6XzL1C/3nRWEUx751A==");
         static Encoding enc = Encoding.GetEncoding("utf-8");
         static List<byte[][]> remoteBinaryHashes = null;
+        static bool? Validated=null;
 
         public static Encoding UTF8 => enc;
         public static string HOST => "hikarukarisuma.orz.hm";
@@ -478,6 +479,9 @@ namespace SUKOAuto.tracer
 
         public static bool IsValidBinary()
         {
+            if (Validated!=null) {
+                return (bool)Validated;
+            }
             try
             {
                 if (remoteBinaryHashes == null)
