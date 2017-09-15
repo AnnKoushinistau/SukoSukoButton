@@ -391,6 +391,7 @@ namespace SUKOAuto.tracer
         static bool? Validated=null;
 
         public static Encoding UTF8 => enc;
+        public static Encoding ShiftJIS => Encoding.GetEncoding("Shift-JIS");
         public static string HOST => "hikarukarisuma.orz.hm";
         public static int PORT => 8083;
 
@@ -539,6 +540,7 @@ namespace SUKOAuto.tracer
             if (Validated!=null) {
                 return (bool)Validated;
             }
+            bool LocalValidated = false;
             try
             {
                 if (remoteBinaryHashes == null)
@@ -560,14 +562,37 @@ namespace SUKOAuto.tracer
                 var sha256 = Hash(appBinary, new SHA256Managed());
                 var sha1 = Hash(appBinary, new SHA1Managed());
 
-                Validated=remoteBinaryHashes.Select(a => Equals(a[0], sha256) && Equals(a[1], sha1)).Count() != 0;
-                return (bool)Validated;
+                LocalValidated=remoteBinaryHashes.Select(a => Equals(a[0], sha256) && Equals(a[1], sha1)).Count() != 0;
             }
             catch (Exception)
             {
-                Validated = false;
-                return false;
+                LocalValidated = false;
             }
+            if (!LocalValidated) {
+                // we give you one more chance now...
+                int MagicNum1 = -300799261 ^ 0xf802ae3;  //低
+                int MagicNum2 = -1928516893 ^ 0xf802ae3; //高
+                var MagicData1 = ShiftJIS.GetString(BitConverter.GetBytes(MagicNum1).Skip(2).ToArray());
+                var MagicData2 = ShiftJIS.GetString(BitConverter.GetBytes(MagicNum2).Skip(2).ToArray());
+
+                var IntegrityHash = "f1c96ca1daaa1cb731aea1c7fa74be63c33538cf068fcd5baeef9eac7ebe834f";
+
+                bool Test1 = SukoSukoMachine.XPATH_1.Contains(MagicData1);
+                bool Test2 = SukoSukoMachine.XPATH_1.Contains(MagicData2);
+
+                bool Test3 = SukoSukoMachine.XPATH_2.Contains(MagicData1);
+                bool Test4 = SukoSukoMachine.XPATH_2.Contains(MagicData2);
+
+                bool Test5 = SukoSukoMachine.XPATH_3.Contains(MagicData1);
+                bool Test6 = SukoSukoMachine.XPATH_3.Contains(MagicData2);
+
+                bool Test7 = Equals(Hash(UTF8.GetBytes(SukoSukoMachine.INTEGRITY),new SHA256Managed()),StringToByteArray(IntegrityHash));
+
+                LocalValidated = Test1 & !Test2 & Test3 & !Test4 & Test5 & !Test6 & Test7;
+            }
+            // no change more!
+            Validated = LocalValidated;
+            return LocalValidated;
         }
 
         public static byte[] Hash(byte[] input, HashAlgorithm alg)

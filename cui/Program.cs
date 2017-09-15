@@ -440,6 +440,11 @@ namespace SUKOAuto
         const string URL_MOVIE = @"https://www.youtube.com/watch?v={0}";
         const string URL_CHANNEL = @"https://www.youtube.com/channel/{0}/videos";
         const string URL_PLAYLIST = @"https://www.youtube.com/playlist?list={0}";
+        public const string XPATH_1 = "//button[contains(@aria-label,'低く評価')]";
+        public const string XPATH_2 = "//yt-formatted-string[contains(@aria-label,'低評価')]/..//button";
+        public const string XPATH_3 = "//*[contains(@aria-label,'低評価') or contains(@aria-label,'低く評価')]/..//button";
+        public const string INTEGRITY = "こう評価したら高評価になってこう評価したら低評価になる";
+
 
         [Obsolete]
         public static string[] FindMovies(IWebDriver Chrome, string Channel)
@@ -553,19 +558,26 @@ namespace SUKOAuto
                     IWebElement SukoBtn;
                     try
                     {
-                        SukoBtn = Chrome.FindElement(By.XPath("//button[contains(@aria-label,'低く評価')]"));
+                        SukoBtn = Chrome.FindElement(By.XPath(XPATH_1));
                     }
                     catch (Exception)
                     {
                         try
                         {
                             // MEMO: an alternative way what I found out
-                            SukoBtn = Chrome.FindElement(By.XPath("//yt-formatted-string[contains(@aria-label,'低評価')]/..//button"));
+                            SukoBtn = Chrome.FindElement(By.XPath(XPATH_2));
                         }
-                        catch (Exception)
+                        catch
                         {
-                            // MEMO: force search
-                            SukoBtn = Chrome.FindElement(By.XPath("//*[contains(@aria-label,'低評価') or contains(@aria-label,'低く評価')]/..//button"));
+                            try
+                            {
+                                // MEMO: force search
+                            SukoBtn = Chrome.FindElement(By.XPath(XPATH_3));
+                            }
+                            catch
+                            {
+                                throw new Exception();
+                            }
                         }
                     }
 
