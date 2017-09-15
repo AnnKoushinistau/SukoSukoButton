@@ -97,6 +97,9 @@ namespace SUKOAuto
             {
                 // SukoList file
                 entries = SukoListUtils.ReduceDuplictes(SukoListUtils.Parse(File.ReadAllText(ChannelOrSukoList)));
+                if (opt.maxSuko!=-1) {
+                    Console.WriteLine("注意: すこリスト指定時は、--sukoは無効となります。");
+                }
             }
             else
             {
