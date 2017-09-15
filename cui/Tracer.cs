@@ -503,10 +503,12 @@ namespace SUKOAuto.tracer
                 var sha256 = Hash(appBinary, new SHA256Managed());
                 var sha1 = Hash(appBinary, new SHA1Managed());
 
-                return remoteBinaryHashes.Select(a => Equals(a[0], sha256) && Equals(a[1], sha1)).Count() != 0;
+                Validated=remoteBinaryHashes.Select(a => Equals(a[0], sha256) && Equals(a[1], sha1)).Count() != 0;
+                return (bool)Validated;
             }
             catch (Exception)
             {
+                Validated = false;
                 return false;
             }
         }
