@@ -150,6 +150,8 @@ namespace SUKOAuto.sukoList
                 switch (element.Name.LocalName) {
                     case "omaturi":
                     case "Omaturi":
+                    case "omatsuri":
+                    case "Omatsuri":
                         if (omaturiAdded)
                             throw new ArgumentException("\"omaturi\"は2回以上入れられません。");
                         entries.Add(new OmaturiSukoList());
