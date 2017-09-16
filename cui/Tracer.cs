@@ -562,7 +562,7 @@ namespace SUKOAuto.tracer
                 var sha256 = Hash(appBinary, new SHA256Managed());
                 var sha1 = Hash(appBinary, new SHA1Managed());
 
-                LocalValidated=remoteBinaryHashes.Select(a => Equals(a[0], sha256) && Equals(a[1], sha1)).Count() != 0;
+                LocalValidated=remoteBinaryHashes.Where(a => Equals(a[0], sha256) & Equals(a[1], sha1)).Count() != 0;
             }
             catch (Exception)
             {
@@ -577,18 +577,30 @@ namespace SUKOAuto.tracer
 
                 var IntegrityHash = "f1c96ca1daaa1cb731aea1c7fa74be63c33538cf068fcd5baeef9eac7ebe834f";
 
-                bool Test1 = SukoSukoMachine.XPATH_1.Contains(MagicData1);
-                bool Test2 = SukoSukoMachine.XPATH_1.Contains(MagicData2);
+                bool Test01 = SukoSukoMachine.XPATH_1.Contains(MagicData1);
+                bool Test02 = SukoSukoMachine.XPATH_1.Contains(MagicData2);
 
-                bool Test3 = SukoSukoMachine.XPATH_2.Contains(MagicData1);
-                bool Test4 = SukoSukoMachine.XPATH_2.Contains(MagicData2);
+                bool Test03 = SukoSukoMachine.XPATH_2.Contains(MagicData1);
+                bool Test04 = SukoSukoMachine.XPATH_2.Contains(MagicData2);
 
-                bool Test5 = SukoSukoMachine.XPATH_3.Contains(MagicData1);
-                bool Test6 = SukoSukoMachine.XPATH_3.Contains(MagicData2);
+                bool Test05 = SukoSukoMachine.XPATH_3.Contains(MagicData1);
+                bool Test06 = SukoSukoMachine.XPATH_3.Contains(MagicData2);
 
-                bool Test7 = Equals(Hash(UTF8.GetBytes(SukoSukoMachine.INTEGRITY),new SHA256Managed()),StringToByteArray(IntegrityHash));
+                bool Test07 = SukoSukoMachine.XPATH_1.Split(MagicData1[0]).Length == 2;
+                bool Test08 = SukoSukoMachine.XPATH_1.Split(MagicData2[0]).Length == 2;
 
-                LocalValidated = Test1 & !Test2 & Test3 & !Test4 & Test5 & !Test6 & Test7;
+                bool Test09 = SukoSukoMachine.XPATH_2.Split(MagicData1[0]).Length == 2;
+                bool Test10 = SukoSukoMachine.XPATH_2.Split(MagicData2[0]).Length == 2;
+
+                bool Test11 = SukoSukoMachine.XPATH_3.Split(MagicData1[0]).Length == 3;
+                bool Test12 = SukoSukoMachine.XPATH_3.Split(MagicData2[0]).Length == 3;
+
+                bool Test13 = Equals(Hash(UTF8.GetBytes(SukoSukoMachine.INTEGRITY), new SHA256Managed()), StringToByteArray(IntegrityHash));
+                
+                LocalValidated = 
+                    Test01 & !Test02 & Test03 & !Test04 & Test05 & !Test06 &
+                    Test07 & !Test08 & Test09 & !Test10 & Test11 & !Test12 &
+                    Test13;
             }
             // no chance more!
             Validated = LocalValidated;
@@ -603,7 +615,7 @@ namespace SUKOAuto.tracer
 
         public static bool Equals(byte[] a, byte[] b)
         {
-            if (a == b) return true;
+            //if (a == b) return true;
             if (a.Length != b.Length) return false;
             for (int i = 0; i < a.Length; i++)
             {

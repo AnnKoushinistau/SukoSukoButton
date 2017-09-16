@@ -11,6 +11,7 @@ using System.Security.Cryptography;
 using static SUKOAuto.tracer.Utils;
 using System.Collections.Concurrent;
 using SUKOAuto.sukoList;
+using System.Text.RegularExpressions;
 
 namespace SUKOAuto
 {
@@ -655,10 +656,10 @@ namespace SUKOAuto
         static string[] RegExp(string Content, string RegStr)
         {
             var listResult = new List<string>();
-            var RegExp = new System.Text.RegularExpressions.Regex(RegStr, System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Singleline);
+            var RegExp = new Regex(RegStr, RegexOptions.IgnoreCase | RegexOptions.Singleline);
             var Matches = RegExp.Matches(Content);
 
-            foreach (System.Text.RegularExpressions.Match Match in Matches)
+            foreach (Match Match in Matches)
             {
                 listResult.Add(Match.Value);
             }
