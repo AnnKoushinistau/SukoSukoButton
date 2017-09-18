@@ -32,11 +32,12 @@ namespace SUKOAuto
                 Console.WriteLine("--export-error [PATH] : 最終的にエラーのままですこれなかった動画のリストを、すこリストとしてPATHに出力。");
                 Console.WriteLine("--import-skip [PATH] : PATHに指定されたすこリストの動画を、最終的な動画リストから削除。");
                 Console.WriteLine("                       Moviesタグのみ有効なので注意。");
-                Console.WriteLine("オプションはEMIAL、PASSWORD、CHANNEL IDのいずれかの間に入れても構わない。");
+                Console.WriteLine("オプションはEMIAL、PASSWORD、CHANNEL ID | SUKO LISTのいずれかの間に入れても構わない。");
                 Console.WriteLine("極端例: example@suko.org --suko 10 sukosuko --para 100 C:...");
                 Console.WriteLine("推奨例: --suko 10 --para 100 example@suko.org sukosuko C:...");
                 Console.WriteLine("SUKOAuto.exeのオプションも一部使用できますが、自信がないのでお勧めしません。");
-                Console.WriteLine("「すこリスト」については、suko-suko-buttonのWikiをご覧ください。");
+                Console.WriteLine("「すこリスト」については、suko-suko-buttonのWikiをご覧ください: ");
+                Console.WriteLine("https://github.com/AnKoushinist/suko-suko-button/wiki/SukoList-Root");
                 Console.WriteLine(" ");
                 Console.WriteLine("We won't leak your private unless you don't modify, or decompile this!");
                 Console.WriteLine("Source code is hidden.");
