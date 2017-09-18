@@ -153,6 +153,11 @@ namespace SUKOAuto
                 ChromeOptions.AddArguments("headless");
             }
 
+            if (opt.hasSukoingChannelSpecified)
+            {
+                Console.WriteLine("注意: すこりに使用するチャンネルの指定は対応しません。");
+            }
+
             List<IWebDriver> Chromes = new IWebDriver[opt.parallel].Select(a => new ChromeDriver(ChromeOptions)).Cast<IWebDriver>().ToList();
             IWebDriver Chrome = Chromes[0];
 
@@ -224,6 +229,12 @@ namespace SUKOAuto
             if (opt.exportStableSukoList != null)
             {
                 ExportList(opt.exportStableSukoList, Movies);
+            }
+
+            if (opt.videosToSeek!=-1)
+            {
+                Movies = Movies.Skip(opt.videosToSeek).ToList();
+                Console.WriteLine($"{opt.videosToSeek}個の動画はスキップされました。");
             }
 
             ConcurrentQueue<string> RemainingMovies = new ConcurrentQueue<string>(Movies);
@@ -684,6 +695,8 @@ namespace SUKOAuto
         public string exportStableSukoList = null;
         public string exportErroredSukoList = null;
         public string importSkipSukoList = null;
+        public int videosToSeek = -1;
+        public bool hasSukoingChannelSpecified=false;
 
         public string[] LoadOpt(string[] args)
         {
@@ -747,6 +760,13 @@ namespace SUKOAuto
                         {
                             // same as --proxy
                             proxy = arg.Substring("-proxy:".Length);
+                        }
+                        else if (arg.StartsWith("-start:"))
+                        {
+                            // we have no option of this
+                            var body = arg.Substring("-start:".Length);
+                            hasSukoingChannelSpecified = true;
+                            videosToSeek = int.Parse(body.Split("@"[0])[0]);
                         }
                         else
                         {
