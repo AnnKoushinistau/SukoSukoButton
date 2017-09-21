@@ -600,11 +600,15 @@ namespace SUKOAuto
                         return;
                     }
 
+                    /*
                     Actions action = new Actions(Chrome);
                     action.MoveToElement(SukoBtn).ClickAndHold().Perform();
                     System.Threading.Thread.Sleep(100);
                     action.MoveToElement(SukoBtn).Release().Perform();
+                    */
 
+                    SukoBtn.Click();
+                    System.Threading.Thread.Sleep(1000);
                     return;
                 }
                 catch (Exception e)
