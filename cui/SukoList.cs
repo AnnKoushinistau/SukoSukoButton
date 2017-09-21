@@ -120,6 +120,7 @@ namespace SUKOAuto.sukoList
     {
         public override string[] GetMovies()
         {
+            return new string[0];
             JObject json;
             using (var wc=new WebClient()) {
                 json = JObject.Parse(wc.DownloadString("http://websuko.xyz/v1/target.php"));
