@@ -277,6 +277,9 @@ namespace SUKOAuto.sukoList
                         continue;
                     }
                     Result.Add(new ConstantSukoList(toInclude));
+                    foreach (var Movie in cl.GetMovies()) {
+                        Movies.Add(Movie);
+                    }
                 }
             }
             return Result;
