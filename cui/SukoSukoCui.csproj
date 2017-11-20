@@ -87,9 +87,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Generic.cs" />
+    <Compile Include="ISukoSukoMachine.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SortedMultiset.cs" />
     <Compile Include="SukoList.cs" />
+    <Compile Include="SukoSukoMachine.cs" />
     <Compile Include="Tracer.cs" />
   </ItemGroup>
   <ItemGroup>
