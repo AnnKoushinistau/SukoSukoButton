@@ -33,7 +33,7 @@ namespace SUKOAuto
 
             do
             {
-                var newScrollHeight = (long)js.ExecuteScript("window.scrollTo(0, document.body.scrollHeight); return document.body.scrollHeight;");
+                var newScrollHeight = (long)js.ExecuteScript("window.scrollTo(0, document.documentElement.scrollHeight); return document.documentElement.scrollHeight;");
 
                 if (newScrollHeight == scrollHeight)
                 {
